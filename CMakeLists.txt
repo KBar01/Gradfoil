@@ -33,6 +33,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(codipack)
 
 #############################################
+# Fetch json (header-only)
+#############################################
+
+FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
+FetchContent_MakeAvailable(json)
+
+#############################################
 # Include your own headers
 #############################################
 include_directories(${PROJECT_SOURCE_DIR}/src/include)
@@ -49,11 +56,11 @@ list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 # Build Executables
 #############################################
 add_executable(CFoil_fwd src/main.cpp ${SOURCES})
-target_link_libraries(CFoil_fwd Eigen3::Eigen)
-#target_compile_definitions(CFoil_fwd PRIVATE -DCODI_EnableEigen)
+target_link_libraries(CFoil_fwd Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
+target_compile_definitions(CFoil_fwd PRIVATE -DCODI_EnableEigen)
 
 add_executable(CFoil_AD src/main.cpp ${SOURCES})
-target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen)
+target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
 
 target_include_directories(CFoil_AD PRIVATE
     ${codipack_SOURCE_DIR}/include
