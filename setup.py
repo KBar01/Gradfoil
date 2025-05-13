@@ -1,39 +1,45 @@
-from setuptools import setup, find_packages
-from setuptools.extension import Extension
-from setuptools.command.build_ext import build_ext
-
-import sys
+import os
 import subprocess
+import shutil
+from setuptools import setup, find_packages
+from setuptools.command.build_py import build_py
 
-with open("README.md") as file:
-    long_description = file.read()
+class BuildWithCMake(build_py):
+    def run(self):
+        
+        # 1. Build C++ executables using CMake
+        build_dir = os.path.abspath("build")
+        os.makedirs(build_dir, exist_ok=True)
+        
+        # builds the executables using cmake
+        subprocess.check_call(["cmake", ".."], cwd=build_dir)
+        subprocess.check_call(["cmake", "--build", "."], cwd=build_dir)
 
-REQUIREMENTS = []
+        # 2. Copy executables into the Python package
+        output_bin_dir = os.path.join("gradfoil", "bin")
+        os.makedirs(output_bin_dir, exist_ok=True)
+        shutil.copy(os.path.join(build_dir, "CFoil_fwd"), output_bin_dir)
+        shutil.copy(os.path.join(build_dir, "CFoil_AD"), output_bin_dir)
 
-CLASSIFIERS = [
-'Development Status :: 2 - Pre-Alpha',
-'Intended Audience :: Developers',
-'Topic :: Internet',
-'License :: OSI Approved :: MIT License',
-'Programming Language :: Python :: 3.7',
-'Programming Language :: Python :: 3.8',
-'Programming Language :: Python :: 3.9',
-'Programming Language :: Python :: 3.10',
-]
+        # 3. Continue with the normal Python build
+        super().run()
 
 
-setup(name='gradfoil',
-version='0.1.0',
-description='Wrapper for the C++ implementation of Tecio for interfacing with Tecplot SZL files',
-long_description=long_description,
-url='https://github.com/sfpullin/pyTecio',
-author='Kieran Barry',
-author_email='',
-license='MIT',
-classifiers=CLASSIFIERS,
-install_requires=REQUIREMENTS,
-packages=['gradfoil'],
-package_data={'gradfoil': ['CFoil_fwd', 'CFoil_AD']}, #TODO: this line i put in my executables
-#include_package_data=True,
-keywords='tecplot reader szl szplt'
+setup(
+    name="gradfoil",
+    version="0.1.0",
+    packages=find_packages(),
+    cmdclass={
+        'build_py': BuildWithCMake,
+    },
+    include_package_data=True,
+    package_data={
+        'gradfoil': ['bin/*'],
+    },
+    install_requires=[],
+    python_requires=">=3.7",
+    author="Your Name",
+    description="Python interface to CFoil tools",
+    long_description=open("README.md").read() if os.path.exists("README.md") else "",
+    long_description_content_type="text/markdown",
 )

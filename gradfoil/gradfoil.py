@@ -1,16 +1,20 @@
 import json
 import subprocess
 import numpy as np
+import os
+import tempfile
+from importlib.resources import files
 
-from pkg_resources import resource_filename
-pth = resource_filename(__name__, "CFoil_fwd")
-coords = np.genfromtxt('n2412coords.txt',delimiter=',')
+# Dynamically locate the installed executable path (in gradfoil/bin/)
+BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
+EXEC_FWD = os.path.join(BIN_DIR, "CFoil_fwd")
+EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
 
-xcoords = coords[0,:].tolist()
-#ycoords = coords[1,:].tolist() 
 
 def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
-
+    
+    cwd = os.getcwd()
+    in_json_path = os.path.join(cwd, "input.json")
     data = {
         "xcoords": xcoords,
         "ycoords": ycoords,
@@ -21,12 +25,11 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
     }
 
     # Write JSON input
-    with open("input.json", "w") as f:
+    with open(in_json_path, "w") as f:
         json.dump(data, f)
 
     # Run the executable for first time, no restarting
-    result = subprocess.run(["./build/CFoil_fwd"], capture_output=True, text=True)
-    print(result)
+    result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
     initConvergence = result.returncode
 
     stepsize = 0.5
@@ -34,7 +37,7 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
         tempalf = alphaDeg - stepsize ; 
         for i in range(50):
             
-            with open("input.json", "r") as f:
+            with open(in_json_path, "r") as f:
                 data = json.load(f)
 
             # Modify only the desired fields
@@ -42,11 +45,11 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
             data["alpha_degrees"] = tempalf  # assign your new value here
 
             # Write back the updated JSON
-            with open("input.json", "w") as f:
+            with open(in_json_path, "w") as f:
                 json.dump(data, f) 
 
 
-            result = subprocess.run(["./build/CFoil_fwd"], capture_output=True, text=True)
+            result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
             backStepConverged = result.returncode
 
             if (backStepConverged):
@@ -67,16 +70,16 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
 
             print("solving : " +str(fwdalf))
 
-            with open("input.json", "r") as f:
+            with open(in_json_path, "r") as f:
                     data = json.load(f)
 
             data["restart"] = 1 # using restart fle
             data["alpha_degrees"] = fwdalf  # trying different alfa
             
-            with open("input.json", "w") as f:
+            with open(in_json_path, "w") as f:
                 json.dump(data, f, indent=4)  # indent is optional, just for readability
 
-            result = subprocess.run(["./build/CFoil_fwd"], capture_output=True, text=True)
+            result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
             fwdStepConverged = result.returncode
             if (not fwdStepConverged):
                 
@@ -103,4 +106,4 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
 def grad_run():
 
     # Run the AD version of the code, using known solution from fwd run
-    result = subprocess.run(["./build/CFoil_AD"], capture_output=True, text=True)
+    result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
