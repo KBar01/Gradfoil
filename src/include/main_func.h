@@ -58,6 +58,6 @@ bool solve_coupled(const Oper&oper,const Foil&foil,const Wake&wake,const Param&p
 
 void calc_force(const Oper&op, const Geom&geom, const Param&par, const Isol&isol,const Foil&foil, const Glob&glob, Post& post);
 
-void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, const Real*Cps, const Oper&oper,
+void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, const Real*Cps, const Oper&oper, const Vsol&vsol,
     Real (&topBLStates)[4],Real (&botBLStates)[4]);
 #endif

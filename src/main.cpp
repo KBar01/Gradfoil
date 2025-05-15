@@ -104,7 +104,7 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
 
     Real topsurf[4],botsurf[4] ;
     // retusn theta,delta*, tau_max, dp/dx on each surface at 95% chord
-    interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,topsurf,botsurf);
+    interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,topsurf,botsurf);
 
 
 
@@ -209,8 +209,6 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
 
 int main(){
 
-
-    auto start = std::chrono::high_resolution_clock::now();
     // Open JSON file
     std::ifstream infile("input.json");
     if (!infile) {
@@ -260,10 +258,6 @@ int main(){
     #endif
     
     bool converged = runCode(doRestart,targetAlphaDeg,Re,Ma,xcoords,ycoords,deltaY,initStates,initTurb);
-    auto end = std::chrono::high_resolution_clock::now();
-
-    std::chrono::duration<double, std::milli> duration_ms = end - start;
-
-    std::cout << "Function took " << duration_ms.count() << " ms\n";
+    
     return converged;
 };
