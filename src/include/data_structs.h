@@ -9,8 +9,6 @@
 #include "main_func.h"
 #include <codi.hpp>
 
-#define Ncoords 200
-#define Nwake 30
 
 //-------------------------------------------------------------------------------
 // Geometry Struct

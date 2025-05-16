@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include "real_type.h"
 #include "panel_funcs.h"
 #include "data_structs.h"
 

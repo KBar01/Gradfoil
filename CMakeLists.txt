@@ -12,8 +12,14 @@ set(CMAKE_BUILD_TYPE Release)
 # Default values for compile-time constants (can be overridden with -D)
 set(Ncoords 200 CACHE STRING "Number of coordinates")
 
-# Output binaries to source directory (for setup.py packaging)
-#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
+option(DO_BL_GRADIENT "Enable boundary layer gradient calculation" ON)
+
+if(DO_BL_GRADIENT)
+  set(DO_BL_GRADIENT_DEFINE 1)
+else()
+  set(DO_BL_GRADIENT_DEFINE 0)
+endif()
+
 
 include(FetchContent)
 
@@ -66,6 +72,7 @@ target_link_libraries(CFoil_fwd Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_j
 target_compile_definitions(CFoil_fwd PRIVATE
   -DCODI_EnableEigen
   -DNcoords=${Ncoords}
+  -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
 )
 
 add_executable(CFoil_AD src/main.cpp ${SOURCES})
@@ -80,4 +87,5 @@ target_compile_definitions(CFoil_AD PRIVATE
   -DCODI_EnableEigen 
   -DCODI_ForcedInlines
   -DNcoords=${Ncoords}
+  -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
 )

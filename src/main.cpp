@@ -15,11 +15,13 @@
 
 using json = nlohmann::json;
 
-bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&xcoords)[Ncoords], Real (&ycoords)[Ncoords],Real (&deltaY)[Ncoords],const Real (&statesInit)[920],const bool (&turbInit)[230]){
+bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&xcoords)[Ncoords], Real (&ycoords)[Ncoords],Real (&deltaY)[Ncoords],const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake]){
 
-
-    Real outputs[10] ;
-    
+    #if DO_BL_GRADIENT
+    Real outputs[10] ; // 10 if doing all gradients CL CD and BL states for both surfaces
+    #else
+    Real outputs[2] ; // only doing CL and CD gradients  (and fwd output)
+    #endif
 
     // ------------- Doing Adjoint, register relevant input to track gradients --------------------------
     #ifdef USE_CODIPACK
@@ -30,7 +32,6 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
         for (int i = 0; i < Ncoords; ++i) {
             tape.registerInput(ycoords[i]);
         }
-        //tape.registerInput(ycoords);
     
     #endif
     //---------------------------- run calculation ----------------------------------------------------
@@ -66,11 +67,11 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
     #ifdef USE_CODIPACK
     
     //init_boundary_layer(oper,foil,param,isol,vsol,glob);
-    for (int i=0;i<920;++i){
+    for (int i=0;i<RVdimension;++i){
         glob.U[i] = statesInit[i];    
     }
 
-    for (int i=0;i<230;++i){vsol.turb[i] = turbInit[i];}
+    for (int i=0;i<(Ncoords+Nwake);++i){vsol.turb[i] = turbInit[i];}
     
     
     #else
@@ -87,8 +88,8 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
         json j;
         prevfile >> j;
 
-        for (int i=0;i<920;++i){glob.U[i] = j["states"][i];}
-        for (int i=0;i<230;++i){vsol.turb[i] = j["turb"][i];}
+        for (int i=0;i<RVdimension;++i){glob.U[i] = j["states"][i];}
+        for (int i=0;i<(Ncoords+Nwake);++i){vsol.turb[i] = j["turb"][i];}
     }
     else{
         init_boundary_layer(oper,foil,param,isol,vsol,glob);
@@ -121,6 +122,7 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
         out["CL"]  = post.cl;
         out["CD"]  = post.cd;
 
+        #if DO_BL_GRADIENT
         out["upperMomThickness"] = topsurf[0];
         out["upperDispThickness"] = topsurf[1];
         out["upperTauMax"] = topsurf[2];
@@ -130,7 +132,7 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
         out["lowerDispThickness"] = botsurf[1];
         out["lowerTauMax"] = botsurf[2];
         out["lowerPressureGrad"] = botsurf[3];
-
+        #endif
         std::ofstream outFile("out.json");
         outFile << out.dump(4);  // pretty print with 4 spaces indentation
         outFile.close();
@@ -144,40 +146,49 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
         outputs[0] = post.cl;
         outputs[1] = post.cd;
 
+        #if DO_BL_GRADIENT
+        int jacobianHeight = 10;
+        #else
+        int jacobianHeight = 2;
+        #endif
+
+        for (int i=0;i<2;++i){
+            tape.registerOutput(outputs[i]);
+        }
+
+        #if DO_BL_GRADIENT
         for (int i=0;i<4;++i){
             outputs[2+i] = topsurf[i];
             outputs[2+4+i] = botsurf[i];
         }
-
-        for (int i=0;i<10;++i){
+        #endif
+        
+        for (int i=0;i<jacobianHeight;++i){
             tape.registerOutput(outputs[i]);
         }
-        
-        
+            
         tape.setPassive();
-        //post.cl.setGradient(1.0);
 
-        for (int i=0;i<10;++i){
-            outputs[i].gradient()[i] = 1.0 ;
-        }
-  
+        for (int i=0;i<jacobianHeight;++i){outputs[i].gradient()[i] = 1.0 ;}
+        
         tape.evaluate();
-
 
         std::vector<std::string> outputNames = {"CL", "CD",
             "thetaUpper", "deltaStarUpper", "tauMaxUpper", "dpdxUpper",
             "thetaLower", "deltaStarLower", "tauMaxLower", "dpdxLower"};
-        codi::Jacobian<double> jacobian(10,Ncoords);
+        
+        
+        codi::Jacobian<double> jacobian(jacobianHeight,Ncoords);
         
         std::vector<std::vector<double>> allGradients ;
         for (int i = 0; i < Ncoords; ++i) {   
-            for (int n=0;n<10;++n){
+            for (int n=0;n<jacobianHeight;++n){
                 jacobian(n,i) = ycoords[i].getGradient()[n];
             }
         }
 
         // Fill allGradients
-        for (int out = 0; out < 10; ++out) {
+        for (int out = 0; out < jacobianHeight; ++out) {
             std::vector<double> grad;
             for (int i = 0; i < Ncoords; ++i) {
                 grad.push_back(jacobian(out, i));  // or however you compute the gradient
@@ -191,9 +202,7 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
         for (int i = 0; i < allGradients.size(); ++i) {
             
             j["d " + outputNames[i] + " / d ycoords"] = allGradients[i];
-            
         }
-        //j["AD_Gradient"] = gradientData;
 
         std::ofstream outFile("ad_gradients.json");
         outFile << j.dump(4);  // pretty-print with 4-space indentation
@@ -235,8 +244,8 @@ int main(){
 
     int doRestart = j["restart"].get<int>();
     
-    Real initStates[920] = {0};
-    bool initTurb[230] = {false} ;
+    Real initStates[RVdimension] = {0};
+    bool initTurb[Ncoords+Nwake] = {false} ;
 
     #ifdef USE_CODIPACK
     
@@ -250,8 +259,8 @@ int main(){
     json jfile;
     filein >> jfile;
 
-    for (int i=0;i<920;++i){initStates[i] = jfile["states"][i];}
-    for (int i=0;i<230;++i){initTurb[i] = jfile["turb"][i];}
+    for (int i=0;i<RVdimension;++i){initStates[i] = jfile["states"][i];}
+    for (int i=0;i<(Ncoords+Nwake);++i){initTurb[i] = jfile["turb"][i];}
 
     
     

@@ -17,15 +17,6 @@ struct Geom;
 struct Wake;
 struct Glob;
 
-
-#ifndef Ncoords
-#error "Ncoords must be defined by the build system"
-#endif
-
-
-constexpr int Nwake = static_cast<int>(std::ceil(Ncoords / 10.0 + 10.0));
-constexpr int RVdimension = Ncoords + Nwake ; 
-
 int colMajorIndex(int row, int col, int num_rows);
 
 void build_gamma_codi(Isol &isol, const Foil& foil, const Oper& oper);
