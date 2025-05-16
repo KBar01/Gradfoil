@@ -1,7 +1,9 @@
 #ifndef MAIN_FUNCS_H
 #define MAIN_FUNCS_H
 
+#include <iostream>
 #include <vector>
+#include <cmath>
 #include "real_type.h"
 #include "panel_funcs.h"
 
@@ -16,13 +18,15 @@ struct Wake;
 struct Glob;
 
 
-#define Ncoords 200 
-#define Nwake 30
-#define RVdimension 920 
+#ifndef Ncoords
+#error "Ncoords must be defined by the build system"
+#endif
+
+
+constexpr int Nwake = static_cast<int>(std::ceil(Ncoords / 10.0 + 10.0));
+constexpr int RVdimension = Ncoords + Nwake ; 
 
 int colMajorIndex(int row, int col, int num_rows);
-
-bool read_csv_flattened_knownsize(const std::string& filename, double* data_out, int N);
 
 void build_gamma_codi(Isol &isol, const Foil& foil, const Oper& oper);
 

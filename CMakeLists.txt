@@ -3,8 +3,14 @@
 cmake_minimum_required(VERSION 3.14)
 project(gradFoil)
 
+
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Release)
+
+
+# Default values for compile-time constants (can be overridden with -D)
+set(Ncoords 200 CACHE STRING "Number of coordinates")
 
 # Output binaries to source directory (for setup.py packaging)
 #set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
@@ -57,7 +63,10 @@ list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 #############################################
 add_executable(CFoil_fwd src/main.cpp ${SOURCES})
 target_link_libraries(CFoil_fwd Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
-target_compile_definitions(CFoil_fwd PRIVATE -DCODI_EnableEigen)
+target_compile_definitions(CFoil_fwd PRIVATE
+  -DCODI_EnableEigen
+  -DNcoords=${Ncoords}
+)
 
 add_executable(CFoil_AD src/main.cpp ${SOURCES})
 target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
@@ -66,4 +75,9 @@ target_include_directories(CFoil_AD PRIVATE
     ${codipack_SOURCE_DIR}/include
 )
 
-target_compile_definitions(CFoil_AD PRIVATE -DUSE_CODIPACK -DCODI_EnableEigen -DCODI_ForcedInlines)
+target_compile_definitions(CFoil_AD PRIVATE
+  -DUSE_CODIPACK
+  -DCODI_EnableEigen 
+  -DCODI_ForcedInlines
+  -DNcoords=${Ncoords}
+)
