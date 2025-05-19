@@ -11,8 +11,12 @@ class BuildWithCMake(build_py):
         build_dir = os.path.abspath("build")
         os.makedirs(build_dir, exist_ok=True)
         
+
+        # Allow passing custom CMake flags via CMAKE_ARGS env var
+        cmake_args = os.environ.get("CMAKE_ARGS", "").split()
+
         # builds the executables using cmake
-        subprocess.check_call(["cmake", ".."], cwd=build_dir)
+        subprocess.check_call(["cmake", ".."] + cmake_args, cwd=build_dir)
         subprocess.check_call(["cmake", "--build", "."], cwd=build_dir)
 
         # 2. Copy executables into the Python package

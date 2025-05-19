@@ -94,9 +94,9 @@ struct Foil {
     void compute_arclengths() {
         s[0] = 0.0;  // First point has zero arclength
         for (int i = 1; i < Ncoords; ++i) {
-            Real dx = x[2 * i] - x[2 * (i-1)];
+            Real dx = x[2*i] - x[2*(i-1)];
             Real dy = x[2* i + 1] - x[2 * (i-1) + 1];
-            s[i] = s[i - 1] + std::sqrt(dx * dx + dy * dy);
+            s[i] = s[i-1] + std::sqrt(dx*dx + dy*dy);
         }
     }
 };
