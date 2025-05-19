@@ -15,7 +15,8 @@
     using Real = double;
 #endif
 
-constexpr int Nwake = static_cast<int>(std::ceil(Ncoords / 10.0 + 10.0));
-constexpr int RVdimension = Ncoords + Nwake ; 
+#define Nwake 40
+#define RVdimension 1364
+#define Ncoords 301
 
 #endif

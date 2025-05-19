@@ -3,14 +3,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(gradFoil)
 
-
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Release)
-
-
-# Default values for compile-time constants (can be overridden with -D)
-set(Ncoords 200 CACHE STRING "Number of coordinates")
 
 option(DO_BL_GRADIENT "Enable boundary layer gradient calculation" ON)
 
@@ -71,7 +65,6 @@ add_executable(CFoil_fwd src/main.cpp ${SOURCES})
 target_link_libraries(CFoil_fwd Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
 target_compile_definitions(CFoil_fwd PRIVATE
   -DCODI_EnableEigen
-  -DNcoords=${Ncoords}
   -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
 )
 
@@ -86,6 +79,5 @@ target_compile_definitions(CFoil_AD PRIVATE
   -DUSE_CODIPACK
   -DCODI_EnableEigen 
   -DCODI_ForcedInlines
-  -DNcoords=${Ncoords}
   -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
 )
