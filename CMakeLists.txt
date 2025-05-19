@@ -6,7 +6,7 @@ project(gradFoil)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Release)
 
-option(DO_BL_GRADIENT "Enable boundary layer gradient calculation" ON)
+option(DO_BL_GRADIENT "Enable boundary layer gradient calculation" OFF)
 
 if(DO_BL_GRADIENT)
   set(DO_BL_GRADIENT_DEFINE 1)
