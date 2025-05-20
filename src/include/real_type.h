@@ -15,8 +15,8 @@
     using Real = double;
 #endif
 
-#define Nwake 41
-#define RVdimension 1368
-#define Ncoords 301
+#define Nwake 31
+#define RVdimension 928
+#define Ncoords 201
 
 #endif
