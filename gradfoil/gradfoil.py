@@ -33,46 +33,54 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
     initConvergence = result.returncode
 
     completed = 0
+
+    
     stepsize = 0.5
     if (not initConvergence):
 
+        max_back_steps = 50
+        min_alpha = 0.0
+        tempalf = alphaDeg - stepsize
+        back_converged = False
         tempalf = alphaDeg - stepsize ; 
-        for i in range(50):
-            
-            with open(in_json_path, "r") as f:
-                data = json.load(f)
 
-            # Modify only the desired fields
-            #data["restart"] = 1  # or 0
-            data["alpha_degrees"] = tempalf  # assign your new value here
-
-            # Write back the updated JSON
-            with open(in_json_path, "w") as f:
-                json.dump(data, f) 
-
-
-            print("stepping back to: " +str(tempalf))
-            result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
-            backStepConverged = result.returncode
-            
-
-            if (backStepConverged):
-                print("stepped back to: " + str(tempalf))
+        for i in range(max_back_steps):
+            if tempalf < min_alpha:
+                print("Minimum AoA reached, cannot backstep further.")
                 break
 
-            tempalf -= 0.5
+            print(f"Trying backstep to: {tempalf} degrees")
+
+            with open(in_json_path, "r") as f:
+                data = json.load(f)
+            data["alpha_degrees"] = tempalf
+            data["restart"] = 0
+            with open(in_json_path, "w") as f:
+                json.dump(data, f)
+
+            result = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"Backstep converged at {tempalf}")
+                back_converged = True
+                break
+
+            tempalf -= 0.25
 
         # At this point have stepped beckward to a converged solution for given aerofoil
         # now need to step forward to reach the initial target alpha
 
+        if not back_converged:
+            return False
+        
+        
         fwdalf = tempalf + stepsize
         attemptCount = 0
         
-        while ((not completed)):
+        while not completed:
             
             # attempt fwd step using prev solution written to restart file
+            print(f"Trying forward step to: {fwdalf} degrees")
 
-            print("solving : " +str(fwdalf))
 
             with open(in_json_path, "r") as f:
                     data = json.load(f)
