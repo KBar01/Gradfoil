@@ -7,7 +7,7 @@
     #if DO_BL_GRADIENTS
     using Real = codi::RealReverseVec<10>;
     #else
-    using Real = codi::RealReverseVec<10>;
+    using Real = codi::RealReverseVec<2>;
     #endif
 
     using Tape = typename Real::Tape;
@@ -15,8 +15,8 @@
     using Real = double;
 #endif
 
-#define Nwake 40
-#define RVdimension 1364
+#define Nwake 41
+#define RVdimension 1368
 #define Ncoords 301
 
 #endif
