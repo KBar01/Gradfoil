@@ -32,8 +32,10 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
     result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
     initConvergence = result.returncode
 
+    completed = 0
     stepsize = 0.5
     if (not initConvergence):
+
         tempalf = alphaDeg - stepsize ; 
         for i in range(50):
             
@@ -49,8 +51,10 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
                 json.dump(data, f) 
 
 
+            print("stepping back to: " +str(tempalf))
             result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
             backStepConverged = result.returncode
+            
 
             if (backStepConverged):
                 print("stepped back to: " + str(tempalf))
@@ -63,7 +67,7 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
 
         fwdalf = tempalf + stepsize
         attemptCount = 0
-        completed = 0
+        
         while ((not completed)):
             
             # attempt fwd step using prev solution written to restart file
@@ -81,26 +85,26 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
 
             result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
             fwdStepConverged = result.returncode
-            if (not fwdStepConverged):
-                
-                if attemptCount > 6 :
-                    break
-                attemptCount += 1
-                fwdalf -= (stepsize / (2**attemptCount)) # take smaller and smaller steps
-                continue
             
-            if (alphaDeg - fwdalf > (stepsize + 0.01)):
-                fwdalf += stepsize              # step fwd 0.25
-            elif (fwdalf == alphaDeg):
-                break                       # just solved target alf, break loop
+            
+            if fwdStepConverged:
+                if abs(fwdalf - alphaDeg) < 1e-3:
+                    completed = True
+                else:
+                    fwdalf = min(fwdalf + stepsize, alphaDeg)
+                    attemptCount = 0  # reset on success
             else:
-                fwdalf = alphaDeg # step fwd to target alf
-            
-            if (alphaDeg - fwdalf > stepsize):
-                attemptCount = 0;  # reset attempt as moving forward with new solution at higher AoA
+                attemptCount += 1
+                if attemptCount > 6:
+                    print("Forward stepping failed after multiple attempts")
+                    break
+                fwdalf -= stepsize / (2 ** attemptCount)
+        
+        
+        return completed
     
-    
-    return initConvergence
+
+    return (initConvergence or completed)
 
 
 def grad_run():
