@@ -15,8 +15,11 @@
     using Real = double;
 #endif
 
-#define Nwake 31
-#define RVdimension 928
-#define Ncoords 201
+#define IDX(i,j,nrow) ((i)+(j)*(nrow)) // For col-major access
+#define Nwake 30
+#define RVdimension 920
+#define Ncoords 200
+#define Nfine 501
+#define Nin 201
 
 #endif

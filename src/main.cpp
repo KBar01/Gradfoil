@@ -15,7 +15,7 @@
 
 using json = nlohmann::json;
 
-bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&xcoords)[Ncoords], Real (&ycoords)[Ncoords],Real (&deltaY)[Ncoords],const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake]){
+bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin], const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake]){
 
     #if DO_BL_GRADIENT
     Real outputs[10] ; // 10 if doing all gradients CL CD and BL states for both surfaces
@@ -29,8 +29,8 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
         Tape& tape = Real::getTape();
         tape.setActive();
 
-        for (int i = 0; i < Ncoords; ++i) {
-            tape.registerInput(ycoords[i]);
+        for (int i = 0; i < Nin; ++i) {
+            tape.registerInput(inYcoords[i]);
         }
     
     #endif
@@ -40,12 +40,22 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
     
     Oper oper(alpha,Re,Ma);
     Geom geom;
-    Real flattenedCoords[2 * Ncoords];
-    // Flatten the coordinates (column-major order)
-    for (int i = 0; i < Ncoords; ++i) {
-        flattenedCoords[2*i] =   xcoords[i];     // X[0][i] -> x[i] (x-coordinates)
-        flattenedCoords[2*i+1] = ycoords[i];   // X[1][i] -> x[N + i] (y-coordinates)
+    
+    Real inCoords[2*Nin];
+    for (int i=0;i<Nin;++i){
+        inCoords[colMajorIndex(0,i,2)] = inXcoords[i];
+        inCoords[colMajorIndex(1,i,2)] = inYcoords[i];
     }
+    Real flattenedCoords[2 * Ncoords];
+    make_panels(inCoords,flattenedCoords); // does spline to redist nodes over aerofoil for fixed number of 200 nodes
+
+
+    //Real flattenedCoords[2 * Ncoords];
+    // Flatten the coordinates (column-major order)
+    //for (int i = 0; i < Ncoords; ++i) {
+    //    flattenedCoords[2*i] =   xcoords[i];     // X[0][i] -> x[i] (x-coordinates)
+    //    flattenedCoords[2*i+1] = ycoords[i];   // X[1][i] -> x[N + i] (y-coordinates)
+    //}
     Foil foil(flattenedCoords);
     Isol isol;
     Param param;
@@ -105,6 +115,11 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
 
     Real topsurf[4],botsurf[4] ;
     // retusn theta,delta*, tau_max, dp/dx on each surface at 95% chord
+
+    Real xcoords[Ncoords];
+
+    for (int i=0;i<Ncoords;++i){xcoords[i] = flattenedCoords[colMajorIndex(0,i,2)];}
+
     interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,topsurf,botsurf);
 
 
@@ -178,19 +193,19 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&x
             "thetaLower", "deltaStarLower", "tauMaxLower", "dpdxLower"};
         
         
-        codi::Jacobian<double> jacobian(jacobianHeight,Ncoords);
+        codi::Jacobian<double> jacobian(jacobianHeight,Nin);
         
         std::vector<std::vector<double>> allGradients ;
-        for (int i = 0; i < Ncoords; ++i) {   
+        for (int i = 0; i < Nin; ++i) {   
             for (int n=0;n<jacobianHeight;++n){
-                jacobian(n,i) = ycoords[i].getGradient()[n];
+                jacobian(n,i) = inYcoords[i].getGradient()[n];
             }
         }
 
         // Fill allGradients
         for (int out = 0; out < jacobianHeight; ++out) {
             std::vector<double> grad;
-            for (int i = 0; i < Ncoords; ++i) {
+            for (int i = 0; i < Nin; ++i) {
                 grad.push_back(jacobian(out, i));  // or however you compute the gradient
             }
             allGradients.push_back(grad);
@@ -229,11 +244,11 @@ int main(){
     json j;
     infile >> j;
 
-    Real xcoords[Ncoords], ycoords[Ncoords];
-    Real deltaY[Ncoords] = {0};
-    for (int i = 0; i < Ncoords; ++i) {
-        xcoords[i] = j["xcoords"][i];       // X[0][i] -> x[i] (x-coordinates)
-        ycoords[i] = j["ycoords"][i];   // X[1][i] -> x[N + i] (y-coordinates)
+    Real inXcoords[Nin], inYcoords[Nin];
+
+    for (int i = 0; i < Nin; ++i) {
+        inXcoords[i] = j["xcoords"][i];       // X[0][i] -> x[i] (x-coordinates)
+        inYcoords[i] = j["ycoords"][i];   // X[1][i] -> x[N + i] (y-coordinates)
     }
    
 
@@ -266,7 +281,7 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,targetAlphaDeg,Re,Ma,xcoords,ycoords,deltaY,initStates,initTurb);
+    bool converged = runCode(doRestart,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb);
     
     return converged;
 };
