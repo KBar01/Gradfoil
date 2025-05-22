@@ -6,6 +6,11 @@ project(gradFoil)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Release)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -fno-fast-math")
+  #-fno-strict-aliasing
+endif()
+
 option(DO_BL_GRADIENT "Enable boundary layer gradient calculation" OFF)
 
 if(DO_BL_GRADIENT)

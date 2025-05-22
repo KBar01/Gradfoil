@@ -48,15 +48,17 @@ void fit_cubic_splineOrig(const Real* x, const Real* y, CubicSpline1DOrig& splin
     //spline.x = new Real[N];
     //spline.c = new Real[4 * (N - 1)];
 
-    Real h[Nin - 1];
-    Real alpha[Nin - 1];
+    Real h[Nin - 1]={0};
+    Real alpha[Nin - 1]={0};
 
-    for (int i = 0; i < Nin; ++i) spline.x[i] = x[i];
-    for (int i = 0; i < Nin - 1; ++i)
+    for (int i = 0; i < Nin; ++i){ spline.x[i] = x[i];}
+    for (int i = 0; i < Nin - 1; ++i){
         h[i] = x[i+1] - x[i];
+    }
 
-    for (int i = 1; i < Nin - 1; ++i)
+    for (int i = 1; i < Nin - 1; ++i){
         alpha[i] = (3.0 / h[i]) * (y[i+1] - y[i]) - (3.0 / h[i-1]) * (y[i] - y[i-1]);
+    }
 
     // Solve tridiagonal system for c coefficients
     Real l[Nin]={0}, mu[Nin]={0}, z[Nin]={0};
@@ -70,10 +72,10 @@ void fit_cubic_splineOrig(const Real* x, const Real* y, CubicSpline1DOrig& splin
 
     l[Nin-1] = 1; z[Nin-1] = 0;
 
-    Real c[Nin]; // temporary c coefficients
-    Real b[Nin - 1];
-    Real d[Nin - 1];
-    c[Nin-1] = 0;
+    Real c[Nin] = {0}; // temporary c coefficients
+    Real b[Nin - 1] = {0};
+    Real d[Nin - 1] = {0};
+    
 
     for (int j = Nin - 2; j >= 0; --j) {
         c[j] = z[j] - mu[j] * c[j+1];
@@ -95,15 +97,17 @@ void fit_cubic_splineFine(const Real* x, const Real* y, CubicSpline1DFine& splin
     //spline.x = new Real[N];
     //spline.c = new Real[4 * (N - 1)];
 
-    Real h[Nfine - 1];
-    Real alpha[Nfine - 1];
+    Real h[Nfine - 1]={0};
+    Real alpha[Nfine - 1]={0};
 
-    for (int i = 0; i < Nfine; ++i) spline.x[i] = x[i];
-    for (int i = 0; i < Nfine - 1; ++i)
+    for (int i = 0; i < Nfine; ++i){ spline.x[i] = x[i];}
+    for (int i = 0; i < Nfine - 1; ++i){
         h[i] = x[i+1] - x[i];
+    }
 
-    for (int i = 1; i < Nfine - 1; ++i)
+    for (int i = 1; i < Nfine - 1; ++i){
         alpha[i] = (3.0 / h[i]) * (y[i+1] - y[i]) - (3.0 / h[i-1]) * (y[i] - y[i-1]);
+    }
 
     // Solve tridiagonal system for c coefficients
     Real l[Nfine]={0}, mu[Nfine]={0}, z[Nfine]={0};
@@ -117,10 +121,9 @@ void fit_cubic_splineFine(const Real* x, const Real* y, CubicSpline1DFine& splin
 
     l[Nfine-1] = 1; z[Nfine-1] = 0;
 
-    Real c[Nfine]; // temporary c coefficients
-    Real b[Nfine - 1];
-    Real d[Nfine - 1];
-    c[Nfine-1] = 0;
+    Real c[Nfine] = {0}; // temporary c coefficients
+    Real b[Nfine - 1] = {0};
+    Real d[Nfine - 1] = {0};
 
     for (int j = Nfine - 2; j >= 0; --j) {
         c[j] = z[j] - mu[j] * c[j+1];
@@ -137,19 +140,18 @@ void fit_cubic_splineFine(const Real* x, const Real* y, CubicSpline1DFine& splin
 
 void spline2dOrig(const Real* X, Spline2DOrig& spline) {
     
-    const Real xq[5] = {
+    Real xq[5] = {
         0.046910077030668, 0.230765344947158, 0.5,
         0.769234655052842, 0.953089922969332
     };
-    const Real wq[5] = {
+    Real wq[5] = {
         0.118463442528095, 0.239314335249683, 0.284444444444444,
         0.239314335249683, 0.118463442528095
     };
 
     // Allocate arc length arrays
-    Real S[Nin];
-    Real Snew[Nin];
-    S[0] = 0.0;
+    Real S[Nin]={0};
+    Real Snew[Nin] = {0};
 
     // 1. Initial arc length estimate
     for (int i = 1; i < Nin; ++i) {
@@ -160,8 +162,8 @@ void spline2dOrig(const Real* X, Spline2DOrig& spline) {
 
     // 2. Initial spline fit
 
-    Real xPoints[Nin] ;
-    Real yPoints[Nin];
+    Real xPoints[Nin] = {0} ;
+    Real yPoints[Nin] = {0};
 
     for (int i=0;i<Nin;++i){
         xPoints[i] = X[IDX(0,i,2)];
@@ -172,7 +174,7 @@ void spline2dOrig(const Real* X, Spline2DOrig& spline) {
     fit_cubic_splineOrig(S, yPoints,spline.Yspline);
 
     // 3. Iterative correction
-    const int max_pass = 10;
+    constexpr int max_pass = 10;
     for (int pass = 0; pass < max_pass; ++pass) {
         Real serr = 0.0;
         Snew[0] = 0.0;
@@ -200,8 +202,9 @@ void spline2dOrig(const Real* X, Spline2DOrig& spline) {
         }
 
         // Replace S with Snew
-        for (int i = 0; i < Nin; ++i)
+        for (int i = 0; i < Nin; ++i){
             S[i] = Snew[i];
+        }
 
         // Refit splines
         fit_cubic_splineOrig(S, xPoints,spline.Xspline);
@@ -221,11 +224,10 @@ void spline2dFine(const Real* X,Spline2DFine& spline) {
     };
 
     // Allocate arc length arrays
-    Real S[Nfine];
-    Real Snew[Nfine];
-    S[0] = 0.0;
+    Real S[Nfine]={0};
+    Real Snew[Nfine]={0};
 
-    Real xPoints[Nfine],yPoints[Nfine];
+    Real xPoints[Nfine]={0},yPoints[Nfine]={0};
     for (int i=0;i<Nfine;++i){
         xPoints[i] = X[IDX(0,i,2)];
         yPoints[i] = X[IDX(1,i,2)];
@@ -353,102 +355,7 @@ Real cubic_interp1d(const Real* x, const Real* y, Real xq) {
     return ((a0 * t + a1) * t + a2) * t + a3;
 }
 
-void spline_curvatureFixed(
-    const Real* Xin,    // Input points 2xNin
-    Real Ufac, Real TEfac,     // Uniformity & TE resolution factors
-    Real* Xout, Real (&Sout)[Ncoords]     // Output points (2xNcoords) and s values (1xNcoords)
-) {
-    // 1. Find X min/max
-    Real xmin = Xin[0], xmax = Xin[0];
-    for (int i = 1; i < Nin; ++i) {
-        xmin = std::min(xmin, Xin[IDX(0,i,2)]);
-        xmax = std::max(xmax, Xin[IDX(0,i,2)]);
-    }
 
-    // 2. Fit spline to original data
-    Spline2DOrig PP;
-    spline2dOrig(Xin, PP);
-
-    // 3. Evaluate fine grid
-    Real s[Nfine];
-    Real smax = PP.Xspline.x[PP.Xspline.N - 1];
-    for (int i = 0; i < Nfine; ++i){
-        s[i] = smax * i / (Nfine - 1);
-    }
-
-    Real xfine[Nfine];
-    Real yfine[Nfine];
-    evaluate_splineOrigtoFine(PP.Xspline, s, xfine);
-    evaluate_splineOrigtoFine(PP.Yspline, s, yfine);
-    Real xyfine[2*Nfine];
-    for (int i=0;i<Nfine;++i){
-        xyfine[IDX(0,i,2)] = xfine[i];
-        xyfine[IDX(1,i,2)] = yfine[i];
-    }
-
-    // 4. Re-spline fine curve
-    Spline2DFine PPfine;
-    spline2dFine(xyfine, PPfine);
-
-    // 5. Compute curvature weights
-    Real sk[Nfine] = {0};
-
-    for (int i = 0; i < Nfine - 1; ++i) {
-        Real ds = s[i+1] - s[i];
-        Real sint = 0;
-
-        for (int q = 0; q < 5; ++q) {
-            Real st = s[i] + xq[q] * ds;
-            int seg = PPfine.Xspline.N - 2;
-            for (int j = 0; j < PPfine.Xspline.N - 1; ++j)
-                if (st <= PPfine.Xspline.x[j+1]) { seg = j; break; }
-
-            Real dx2 = 6.0 * PPfine.Xspline.c[IDX(0,seg,4)] * (st - PPfine.Xspline.x[seg])
-                       + 2.0 * PPfine.Xspline.c[IDX(1,seg,4)];
-            Real dy2 = 6.0 * PPfine.Yspline.c[IDX(0,seg,4)] * (st - PPfine.Yspline.x[seg])
-                       + 2.0 * PPfine.Yspline.c[IDX(1,seg,4)];
-
-            sint += wq[q] * std::sqrt(dx2*dx2 + dy2*dy2);
-        }
-
-        sint = sint * ds * 0.5 + 0.01 * Ufac;
-
-        Real xx = (0.5 * (xyfine[IDX(0,i,2)] + xyfine[IDX(0,i+1,2)]) - xmin) / (xmax - xmin);
-        sint += TEfac * 0.5 * std::exp(-100 * (1.0 - xx));
-        sk[i+1] = sk[i] + sint;
-    }
-
-    // 6. Avoid zero spacing
-    Real sksum = 0;
-    for (int i = 0; i < Nfine; ++i) { sksum += sk[i]; }
-    for (int i = 0; i < Nfine; ++i) { sk[i] += 2.0 * sksum / Nfine; }
-
-    // 7. Map new s values
-    Real skl[Ncoords];
-    for (int i = 0; i < Ncoords; ++i) {
-        skl[i] = sk[0] + i * (sk[Nfine - 1] - sk[0]) / (Ncoords - 1);
-    }
-
-    for (int i = 0; i < Ncoords - 1; ++i) {
-        Sout[i] = cubic_interp1d(sk, s,skl[i]);
-    }
-    Sout[Ncoords - 1] = s[Nfine - 1];  // Ensure last s exactly matches end of fine spline
-
-    // 8. Evaluate spline at new s values
-    Real xXout[Ncoords];
-    Real yXout[Ncoords];
-    evaluate_splineFinetoOut(PPfine.Xspline, Sout, xXout);
-    evaluate_splineFinetoOut(PPfine.Yspline, Sout, yXout);
-
-    for (int i = 0; i < Ncoords - 1; ++i) {
-        Xout[IDX(0,i,2)] = xXout[i];
-        Xout[IDX(1,i,2)] = yXout[i];
-    }
-
-    // 9. Final fix to force x = 1 at end
-    Xout[IDX(0,Ncoords-1,2)] = 1.0;
-    Xout[IDX(1,Ncoords-1,2)] = yXout[Ncoords-1];
-}
 
 void spline_curvature(
     const Real* Xin,    // Input points 2xNin
@@ -467,7 +374,7 @@ void spline_curvature(
     spline2dOrig(Xin, PP);
 
     // 3. Evaluate fine grid
-    Real s[Nfine];
+    Real s[Nfine]={0};
     Real smax = PP.Xspline.x[PP.Xspline.N - 1];
 
     Real counter = 0 ;
@@ -477,11 +384,11 @@ void spline_curvature(
     }
 
     
-    Real xfine[Nfine];
-    Real yfine[Nfine];
+    Real xfine[Nfine]={0};
+    Real yfine[Nfine]={0};
     evaluate_splineOrigtoFine(PP.Xspline, s, xfine);
     evaluate_splineOrigtoFine(PP.Yspline, s, yfine);
-    Real xyfine[2*Nfine];
+    Real xyfine[2*Nfine]={0};
     for (int i=0;i<Nfine;++i){
         xyfine[IDX(0,i,2)] = xfine[i];
         xyfine[IDX(1,i,2)] = yfine[i];
@@ -530,7 +437,7 @@ void spline_curvature(
     for (int i = 0; i < Nfine; ++i){sk[i] += 2.0 * sksum / 501;}
 
     // 7. Map new s values
-    Real skl[Ncoords];
+    Real skl[Ncoords]={0};
     for (int i = 0; i < Ncoords; ++i){
         skl[i] = sk[0] + i * (sk[Nfine - 1] - sk[0]) / (Ncoords - 1);
     }
@@ -541,8 +448,8 @@ void spline_curvature(
 
     // 8. Evaluate spline at new s values
 
-    Real xXout[Ncoords];
-    Real yXout[Ncoords];
+    Real xXout[Ncoords]={0};
+    Real yXout[Ncoords]={0};
     evaluate_splineFinetoOut(PPfine.Xspline, Sout, xXout);
     evaluate_splineFinetoOut(PPfine.Yspline, Sout, yXout);
 

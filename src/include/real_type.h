@@ -20,6 +20,6 @@
 #define RVdimension 920
 #define Ncoords 200
 #define Nfine 501
-#define Nin 201
+#define Nin 301
 
 #endif

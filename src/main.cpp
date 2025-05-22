@@ -17,6 +17,7 @@ using json = nlohmann::json;
 
 bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin], const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake]){
 
+    auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
     Real outputs[10] ; // 10 if doing all gradients CL CD and BL states for both surfaces
     #else
@@ -41,21 +42,14 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&i
     Oper oper(alpha,Re,Ma);
     Geom geom;
     
-    Real inCoords[2*Nin];
+    Real inCoords[2*Nin]={0};
     for (int i=0;i<Nin;++i){
         inCoords[colMajorIndex(0,i,2)] = inXcoords[i];
         inCoords[colMajorIndex(1,i,2)] = inYcoords[i];
     }
-    Real flattenedCoords[2 * Ncoords];
+    Real flattenedCoords[2 * Ncoords]={0};
     make_panels(inCoords,flattenedCoords); // does spline to redist nodes over aerofoil for fixed number of 200 nodes
 
-
-    //Real flattenedCoords[2 * Ncoords];
-    // Flatten the coordinates (column-major order)
-    //for (int i = 0; i < Ncoords; ++i) {
-    //    flattenedCoords[2*i] =   xcoords[i];     // X[0][i] -> x[i] (x-coordinates)
-    //    flattenedCoords[2*i+1] = ycoords[i];   // X[1][i] -> x[N + i] (y-coordinates)
-    //}
     Foil foil(flattenedCoords);
     Isol isol;
     Param param;
@@ -116,13 +110,22 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&i
     Real topsurf[4],botsurf[4] ;
     // retusn theta,delta*, tau_max, dp/dx on each surface at 95% chord
 
-    Real xcoords[Ncoords];
+    Real xcoords[Ncoords]={0};
+    Real ycoords[Ncoords]={0};
 
-    for (int i=0;i<Ncoords;++i){xcoords[i] = flattenedCoords[colMajorIndex(0,i,2)];}
+    for (int i=0;i<Ncoords;++i){
+        xcoords[i] = flattenedCoords[colMajorIndex(0,i,2)];
+        ycoords[i] = flattenedCoords[colMajorIndex(1,i,2)];
+    }
 
     interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,topsurf,botsurf);
 
+    auto end = std::chrono::high_resolution_clock::now();
 
+    // Duration in milliseconds (or other units)
+    std::chrono::duration<double, std::milli> duration = end - start;
+
+    std::cout << "Elapsed time: " << duration.count() << " ms\n";
 
     # ifndef USE_CODIPACK
     if (converged){
@@ -244,7 +247,7 @@ int main(){
     json j;
     infile >> j;
 
-    Real inXcoords[Nin], inYcoords[Nin];
+    Real inXcoords[Nin]={0}, inYcoords[Nin]={0};
 
     for (int i = 0; i < Nin; ++i) {
         inXcoords[i] = j["xcoords"][i];       // X[0][i] -> x[i] (x-coordinates)
@@ -283,5 +286,6 @@ int main(){
     
     bool converged = runCode(doRestart,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb);
     
+    std::cout << "converged: " << converged << std::endl ;
     return converged;
 };
