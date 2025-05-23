@@ -53,8 +53,8 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
                 print("Minimum AoA reached, cannot backstep further.")
                 break
 
-            print(f"Trying backstep to: {tempalf} degrees")
-
+            print(f"Trying backstep to: {tempalf:.17f} degrees")
+            
             with open(in_json_path, "r") as f:
                 data = json.load(f)
             data["alpha_degrees"] = tempalf
