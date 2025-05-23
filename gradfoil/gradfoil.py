@@ -31,8 +31,10 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
 
     # Run the executable for first time, no restarting
     time.sleep(0.4)
-    result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
-    initConvergence = result.returncode
+    initResult = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
+    initConvergence = initResult.returncode
+
+    print('init run:' + str(initResult))
     time.sleep(0.4)
     completed = 0
 
@@ -64,9 +66,9 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
             with open(in_json_path, "w") as f:
                 json.dump(data, f)
             time.sleep(0.4)
-            result = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
+            backstepResult = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
             time.sleep(0.4)
-            if result.returncode == 0:
+            if backstepResult.returncode == 1:
                 print(f"Backstep converged at {tempalf}")
                 back_converged = True
                 break
