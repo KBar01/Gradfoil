@@ -40,7 +40,6 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
 
         max_back_steps = 50
         min_alpha = 0.0
-        tempalf = alphaDeg - stepsize
         back_converged = False
         tempalf = alphaDeg - stepsize ; 
 
