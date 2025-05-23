@@ -41,7 +41,7 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
         max_back_steps = 50
         min_alpha = 0.0
         back_converged = False
-        tempalf = alphaDeg - stepsize ; 
+        tempalf = np.round(alphaDeg,decimals=1) - stepsize ; 
 
         for i in range(max_back_steps):
             if tempalf < min_alpha:
