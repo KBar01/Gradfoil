@@ -33,6 +33,7 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&i
         for (int i = 0; i < Nin; ++i) {
             tape.registerInput(inYcoords[i]);
         }
+        tape.registerInput(alphad);
     
     #endif
     //---------------------------- run calculation ----------------------------------------------------
@@ -197,6 +198,7 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&i
         
         
         codi::Jacobian<double> jacobian(jacobianHeight,Nin);
+        codi::Jacobian<double> jacobianAlpha(jacobianHeight,1);
         
         std::vector<std::vector<double>> allGradients ;
         for (int i = 0; i < Nin; ++i) {   
@@ -204,6 +206,11 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&i
                 jacobian(n,i) = inYcoords[i].getGradient()[n];
             }
         }
+
+        for (int n=0;n<jacobianHeight;++n){
+            jacobianAlpha(n,0) = alphad.getGradient()[n];
+        }
+
 
         // Fill allGradients
         for (int out = 0; out < jacobianHeight; ++out) {
@@ -222,6 +229,20 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&i
             j["d " + outputNames[i] + " / d ycoords"] = allGradients[i];
         }
 
+        std::vector<std::vector<double>> allGradientsAlf ;
+        for (int out = 0; out < jacobianHeight; ++out) {
+            std::vector<double> gradAlf;
+            for (int i = 0; i < 1; ++i) {
+                gradAlf.push_back(jacobianAlpha(out, i));  // or however you compute the gradient
+            }
+            allGradientsAlf.push_back(gradAlf);
+        }
+        
+        for (int i = 0; i < allGradientsAlf.size(); ++i) {
+            
+            j["d " + outputNames[i] + " / d alpha"] = allGradientsAlf[i];
+        }
+        
         std::ofstream outFile("ad_gradients.json");
         outFile << j.dump(4);  // pretty-print with 4-space indentation
         outFile.close();
