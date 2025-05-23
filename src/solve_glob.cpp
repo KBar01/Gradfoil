@@ -64,12 +64,11 @@ void solve_sys(Glob& glob) {
 
 #else
 
-
 template<typename T>
 using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 template<typename T>
 using Vector = Eigen::Matrix<T, Eigen::Dynamic, 1>;
- 
+
 template<typename Type>
 void func(Matrix<Type> const& A, Vector<Type> const& rhs, Vector<Type>& sol) {
     
