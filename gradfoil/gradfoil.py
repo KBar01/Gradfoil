@@ -1,6 +1,7 @@
 import json
 import subprocess
 import numpy as np
+import time
 import os
 import tempfile
 from importlib.resources import files
@@ -29,9 +30,10 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
         json.dump(data, f)
 
     # Run the executable for first time, no restarting
+    time.sleep(0.4)
     result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
     initConvergence = result.returncode
-
+    time.sleep(0.4)
     completed = 0
 
     
@@ -61,8 +63,9 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
             data["restart"] = 0
             with open(in_json_path, "w") as f:
                 json.dump(data, f)
-
+            time.sleep(0.4)
             result = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
+            time.sleep(0.4)
             if result.returncode == 0:
                 print(f"Backstep converged at {tempalf}")
                 back_converged = True
