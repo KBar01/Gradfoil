@@ -42,8 +42,13 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
         min_alpha = 0.0
         back_converged = False
         tempalf = np.round(alphaDeg,decimals=1) - stepsize ; 
-
+        smallStep = 0.25
         for i in range(max_back_steps):
+            
+            if tempalf < 2.05 :
+                tempalf = np.round(tempalf,decimals=1)
+                smallStep = 0.1
+            
             if tempalf < min_alpha:
                 print("Minimum AoA reached, cannot backstep further.")
                 break
@@ -62,8 +67,9 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
                 print(f"Backstep converged at {tempalf}")
                 back_converged = True
                 break
-
-            tempalf -= 0.25
+            
+            
+            tempalf -= smallStep
 
         # At this point have stepped beckward to a converged solution for given aerofoil
         # now need to step forward to reach the initial target alpha
