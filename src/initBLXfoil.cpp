@@ -102,7 +102,6 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
     std::ifstream infile("xfoilstates.json");
     if (!infile) {
         std::cerr << "Failed to open xfoilstates.json\n";
-        return 1;
     }
 
     // Parse the JSON
@@ -117,7 +116,7 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
     }
 
 
-    int surf = 2
+    int surf = 2;
     const std::vector<int> indexList = vsol.Is[surf] ;
     int N = indexList.size(); // How many nodes are on this surface
 
