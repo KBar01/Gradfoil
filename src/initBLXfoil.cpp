@@ -99,9 +99,9 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
 
     // Read in the input json with xfoil data in it
     // Open JSON file
-    std::ifstream infile("input.json");
+    std::ifstream infile("xfoilstates.json");
     if (!infile) {
-        std::cerr << "Failed to open input.json\n";
+        std::cerr << "Failed to open xfoilstates.json\n";
         return 1;
     }
 
@@ -110,9 +110,12 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
     infile >> j;
 
     for (int i = 0; i < (Ncoords*4); ++i) {
-        glob.U[i] = j["xfoilStates"][i];       // Xfoil states on foil (col major )
-        vsol.turb = j["xfoilturb"][i]
+        glob.U[i] = j["states"][i];       // Xfoil states on foil (col major )
     }
+    for (int i = 0; i < (Ncoords); ++i){
+        vsol.turb = j["turb"][i]
+    }
+
 
     int surf = 2
     const std::vector<int> indexList = vsol.Is[surf] ;

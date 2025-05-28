@@ -4,6 +4,7 @@ import numpy as np
 import os
 import tempfile
 from importlib.resources import files
+from xfoilRun import run_xfoil_get_BL_states
 
 # Dynamically locate the installed executable path (in gradfoil/bin/)
 BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
@@ -21,7 +22,8 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
         "alpha_degrees": alphaDeg,
         "Re": Re,
         "Ma": Ma,
-        "restart": 0
+        "restart": 0,
+        "xfoilStart":0
     }
 
     # Write JSON input
@@ -124,3 +126,61 @@ def grad_run():
 
     # Run the AD version of the code, using known solution from fwd run
     result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
+
+
+
+
+def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords):
+    
+
+    cwd = os.getcwd()
+    in_json_path = os.path.join(cwd, "input.json")
+    data = {
+        "xcoords": xcoords,
+        "ycoords": ycoords,
+        "alpha_degrees": alphaDeg,
+        "Re": Re,
+        "Ma": Ma,
+        "restart": 0,
+        "xfoilstart":0,
+        "xfoilgetpoints":1
+    }
+
+    # Write JSON input
+    with open(in_json_path, "w") as f:
+        json.dump(data, f)
+
+    # Run the executable to get inner foil coords
+    initResult = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
+    initConvergence = initResult.returncode
+
+    foil_json_path = os.path.join(cwd, "innerfoilNodes.json")
+    with open(foil_json_path, "r") as f:
+        data = json.load(f)
+    
+    nodes = data["points"]
+    nodes.reshape((2, 200), order='F')
+
+    # Run xfoil with the foil for converged states
+    innerFoil = nodes.T
+    xfoilStates,xfoilturb = run_xfoil_get_BL_states(innerFoil,alphaDeg,Re,Ma)
+    # save them to json
+    xfoil_json_path = os.path.join(cwd, "xfoilstates.json")
+    data = {
+        "states":xfoilStates.flatten(order='F'),
+        "turb": xfoilturb
+    }
+    with open(xfoil_json_path, "w") as f:
+        json.dump(data, f)
+
+    with open(in_json_path, "r") as f:
+        data = json.load(f)
+    data["xfoilgetpoints"] = 0 
+    data["xfoilstart"] = 1      
+    with open(in_json_path, "w") as f:
+        json.dump(data, f, indent=4)
+    
+    Result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
+    converged = Result.returncode
+
+    return converged

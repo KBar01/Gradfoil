@@ -15,7 +15,7 @@
 
 using json = nlohmann::json;
 
-bool runCode(bool restart,bool xfoilStart,Real alphad,const Real Re,const Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin], const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake]){
+bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Real Re,const Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin], const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake]){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -51,6 +51,18 @@ bool runCode(bool restart,bool xfoilStart,Real alphad,const Real Re,const Real M
     Real flattenedCoords[2 * Ncoords]={0};
     make_panels(inCoords,flattenedCoords); // does spline to redist nodes over aerofoil for fixed number of 200 nodes
 
+    if (doGetPoints){
+        
+        json points;
+        points["points"]  = flattenedCoords;
+        std::ofstream pointsFile("innerfoilNodes.json");
+        pointsFile << points.dump(4);  // pretty print with 4 spaces indentation
+        pointsFile.close();
+
+        return 1;
+    }
+    else
+    {
     Foil foil(flattenedCoords);
     Isol isol;
     Param param;
@@ -257,6 +269,7 @@ bool runCode(bool restart,bool xfoilStart,Real alphad,const Real Re,const Real M
     #endif
 
     return converged;
+    }
 };
 
 
@@ -287,7 +300,8 @@ int main(){
     Real Ma = j["Ma"].get<double>();
 
     int doRestart = j["restart"].get<int>();
-    int doXfoilStart = j["xfoilStart"].get<int>();
+    int doXfoilStart = j["xfoilstart"].get<int>();
+    int doGetPoints = j["xfoilgetpoints"].get<int>();
     
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
@@ -311,7 +325,7 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,doXfoilStart,targetAlphaDeg, Re,Ma,inXcoords,inYcoords,initStates,initTurb);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;
