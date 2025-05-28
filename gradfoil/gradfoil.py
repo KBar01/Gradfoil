@@ -83,6 +83,7 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
         fwdalf = tempalf + stepsize
         attemptCount = 0
         
+        overallCount = 0
         while not completed:
             
             # attempt fwd step using prev solution written to restart file
@@ -114,6 +115,10 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
                     print("Forward stepping failed after multiple attempts")
                     break
                 fwdalf -= stepsize / (2 ** attemptCount)
+        
+            if overallCount > 20:
+                break
+            overallCount +=1
         
         
         return completed
