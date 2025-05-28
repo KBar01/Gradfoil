@@ -112,7 +112,7 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
         glob.U[i] = j["states"][i];       // Xfoil states on foil (col major )
     }
     for (int i = 0; i < (Ncoords); ++i){
-        vsol.turb[i] = j["turb"][i]
+        vsol.turb[i] = j["turb"][i];
     }
 
 
