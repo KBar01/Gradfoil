@@ -15,7 +15,7 @@
 
 using json = nlohmann::json;
 
-bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin], const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake]){
+bool runCode(bool restart,bool xfoilStart,Real alphad,const Real Re,const Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin], const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake]){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -96,7 +96,12 @@ bool runCode(bool restart,Real alphad,const Real Re,const Real Ma,const Real (&i
         for (int i=0;i<RVdimension;++i){glob.U[i] = j["states"][i];}
         for (int i=0;i<(Ncoords+Nwake);++i){vsol.turb[i] = j["turb"][i];}
     }
-    else{
+    
+    else if (xfoilStart){
+        init_boundary_layer_from_xfoil(oper,foil,param,isol,vsol,glob);
+    }
+    
+    else {
         init_boundary_layer(oper,foil,param,isol,vsol,glob);
     }
     #endif
@@ -282,6 +287,7 @@ int main(){
     Real Ma = j["Ma"].get<double>();
 
     int doRestart = j["restart"].get<int>();
+    int doXfoilStart = j["xfoilStart"].get<int>();
     
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
@@ -305,7 +311,7 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb);
+    bool converged = runCode(doRestart,doXfoilStart,targetAlphaDeg, Re,Ma,inXcoords,inYcoords,initStates,initTurb);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;
