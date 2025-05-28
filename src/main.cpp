@@ -59,7 +59,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
         pointsFile << points.dump(4);  // pretty print with 4 spaces indentation
         pointsFile.close();
 
-        return 1;
+        return true;
     }
     else
     {
