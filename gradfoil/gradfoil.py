@@ -23,7 +23,8 @@ def standard_run(alphaDeg,Re,Ma,xcoords,ycoords):
         "Re": Re,
         "Ma": Ma,
         "restart": 0,
-        "xfoilStart":0
+        "xfoilStart":0,
+        "xfoilgetpoints":0
     }
 
     # Write JSON input
