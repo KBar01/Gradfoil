@@ -51,14 +51,17 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
     Real flattenedCoords[2 * Ncoords]={0};
     make_panels(inCoords,flattenedCoords); // does spline to redist nodes over aerofoil for fixed number of 200 nodes
 
+    
+    
     if (doGetPoints){
         
+        #ifndef USE_CODIPACK
         json points;
         points["points"]  = flattenedCoords;
         std::ofstream pointsFile("innerfoilNodes.json");
         pointsFile << points.dump(4);  // pretty print with 4 spaces indentation
         pointsFile.close();
-
+        #endif
         return true;
     }
     else

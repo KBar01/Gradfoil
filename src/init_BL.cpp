@@ -9,9 +9,7 @@
 #include "residuals.h"
 
 
-#include "nlohmann/json.hpp"  // nlohmann/json
 
-using json = nlohmann::json;
 
 void thwaites_init(const Real&stagConstant, const Param&param,Real& momThickness,Real&dispThickness){
 
@@ -28,6 +26,10 @@ node remains unchanged, so its parameters are fixed for that iteration, dont nee
 
 
 #ifndef USE_CODIPACK
+
+#include "nlohmann/json.hpp"  // nlohmann/json
+
+using json = nlohmann::json;
 
 void solve_linear_system(const Real* A, const Real* RHS, Real*xOut, const int matDim,const int outDim) {
 
