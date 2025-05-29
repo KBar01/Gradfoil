@@ -306,7 +306,7 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords):
     with open(foil_json_path, "r") as f:
         data = json.load(f)
     
-    nodes = data["points"]
+    nodes = np.array(data["points"])
     nodes.reshape((2, 200), order='F')
 
     # Run xfoil with the foil for converged states
