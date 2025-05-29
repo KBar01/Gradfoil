@@ -8,7 +8,9 @@
 #include "get_funcs.h"
 #include "residuals.h"
 
+#include "nlohmann/json.hpp"  // nlohmann/json
 
+using json = nlohmann::json;
 
 
 void thwaites_init(const Real&stagConstant, const Param&param,Real& momThickness,Real&dispThickness){
@@ -26,10 +28,6 @@ node remains unchanged, so its parameters are fixed for that iteration, dont nee
 
 
 #ifndef USE_CODIPACK
-
-#include "nlohmann/json.hpp"  // nlohmann/json
-
-using json = nlohmann::json;
 
 void solve_linear_system(const Real* A, const Real* RHS, Real*xOut, const int matDim,const int outDim) {
 
@@ -449,6 +447,8 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
 
     // Read in the input json with xfoil data in it
     // Open JSON file
+    
+    #ifndef USE_CODIPACK
     std::ifstream infile("xfoilstates.json");
     if (!infile) {
         std::cerr << "Failed to open xfoilstates.json\n";
@@ -465,7 +465,7 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
         vsol.turb[i] = j["turb"][i];
     }
 
-
+    #endif
     int surf = 2;
     const std::vector<int> indexList = vsol.Is[surf] ;
     int N = indexList.size(); // How many nodes are on this surface
