@@ -307,7 +307,7 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords):
         data = json.load(f)
     
     nodes = np.array(data["points"])
-    nodes.reshape((2, 200), order='F')
+    nodes = nodes.reshape((2, 200), order='F')
 
     # Run xfoil with the foil for converged states
     innerFoil = nodes.T
@@ -315,8 +315,8 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords):
     # save them to json
     xfoil_json_path = os.path.join(cwd, "xfoilstates.json")
     data = {
-        "states":xfoilStates.flatten(order='F'),
-        "turb": xfoilturb
+        "states":(xfoilStates.flatten(order='F')).tolist(),
+        "turb": xfoilturb.tolist()
     }
     with open(xfoil_json_path, "w") as f:
         json.dump(data, f)
