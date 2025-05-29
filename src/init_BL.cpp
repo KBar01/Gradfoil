@@ -8,6 +8,11 @@
 #include "get_funcs.h"
 #include "residuals.h"
 
+
+#include "nlohmann/json.hpp"  // nlohmann/json
+
+using json = nlohmann::json;
+
 void thwaites_init(const Real&stagConstant, const Param&param,Real& momThickness,Real&dispThickness){
 
     Real nu = param.mu0/param.rho0 ;
