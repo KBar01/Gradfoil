@@ -12,11 +12,18 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 option(DO_BL_GRADIENT "Enable boundary layer gradient calculation" ON)
+option(DO_SOUND "Enable calculation of TE sound" OFF)
 
 if(DO_BL_GRADIENT)
   set(DO_BL_GRADIENT_DEFINE 1)
 else()
   set(DO_BL_GRADIENT_DEFINE 0)
+endif()
+
+if(DO_SOUND)
+  set(DO_SOUND_DEFINE 1)
+else()
+  set(DO_SOUND_DEFINE 0)
 endif()
 
 
@@ -71,6 +78,7 @@ target_link_libraries(CFoil_fwd Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_j
 target_compile_definitions(CFoil_fwd PRIVATE
   -DCODI_EnableEigen
   -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
+  -DDO_SOUND=${DO_SOUND_DEFINE}
 )
 
 add_executable(CFoil_AD src/main.cpp ${SOURCES})
@@ -85,4 +93,5 @@ target_compile_definitions(CFoil_AD PRIVATE
   -DCODI_EnableEigen 
   -DCODI_ForcedInlines
   -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
+  -DDO_SOUND=${DO_SOUND_DEFINE}
 )
