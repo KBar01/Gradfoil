@@ -11,7 +11,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
   #-fno-strict-aliasing
 endif()
 
-option(DO_BL_GRADIENT "Enable boundary layer gradient calculation" OFF)
+option(DO_BL_GRADIENT "Enable boundary layer gradient calculation" ON)
 
 if(DO_BL_GRADIENT)
   set(DO_BL_GRADIENT_DEFINE 1)
