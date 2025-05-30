@@ -19,7 +19,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
-    Real outputs[10] ; // 10 if doing all gradients CL CD and BL states for both surfaces
+    Real outputs[16] ; // 12 if doing all gradients CL CD and BL states for both surfaces
     #else
     Real outputs[2] ; // only doing CL and CD gradients  (and fwd output)
     #endif
@@ -128,8 +128,8 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
     Post post;
     calc_force(oper,geom,param,isol,foil,glob,post);
 
-    Real topsurf[4],botsurf[4] ;
-    // retusn theta,delta*, tau_max, dp/dx on each surface at 95% chord
+    Real topsurf[7],botsurf[7];
+    // retusn theta,delta*, tau_max, dp/dx, ue on each surface at 95% chord
 
     Real xcoords[Ncoords]={0};
     Real ycoords[Ncoords]={0};
@@ -139,7 +139,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
         ycoords[i] = flattenedCoords[colMajorIndex(1,i,2)];
     }
 
-    interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,topsurf,botsurf);
+    interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,param,topsurf,botsurf);
 
     auto end = std::chrono::high_resolution_clock::now();
 
@@ -165,12 +165,19 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
         out["upperMomThickness"] = topsurf[0];
         out["upperDispThickness"] = topsurf[1];
         out["upperTauMax"] = topsurf[2];
-        out["upperPressureGrad"] = topsurf[3];
+        out["upperEdgeVelocity"] = topsurf[3];
+        out["upperPressureGrad"] = topsurf[4];
+        out["upperTauWall"] = topsurf[5];
+        out["upperdelta99"] = topsurf[6];
+
 
         out["lowerMomThickness"] = botsurf[0];
         out["lowerDispThickness"] = botsurf[1];
         out["lowerTauMax"] = botsurf[2];
-        out["lowerPressureGrad"] = botsurf[3];
+        out["lowerEdgeVelocity"] = botsurf[3];
+        out["lowerPressureGrad"] = botsurf[4];
+        out["lowerTauWall"] = botsurf[5];
+        out["lowerDelta99"] = botsurf[6];
         #endif
         std::ofstream outFile("out.json");
         outFile << out.dump(4);  // pretty print with 4 spaces indentation
@@ -186,19 +193,15 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
         outputs[1] = post.cd;
 
         #if DO_BL_GRADIENT
-        int jacobianHeight = 10;
+        constexpr int jacobianHeight = 16;
         #else
-        int jacobianHeight = 2;
+        constexpr int jacobianHeight = 2;
         #endif
 
-        for (int i=0;i<2;++i){
-            tape.registerOutput(outputs[i]);
-        }
-
         #if DO_BL_GRADIENT
-        for (int i=0;i<4;++i){
+        for (int i=0;i<7;++i){
             outputs[2+i] = topsurf[i];
-            outputs[2+4+i] = botsurf[i];
+            outputs[2+7+i] = botsurf[i];
         }
         #endif
         
@@ -213,12 +216,12 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
         tape.evaluate();
 
         std::vector<std::string> outputNames = {"CL", "CD",
-            "thetaUpper", "deltaStarUpper", "tauMaxUpper", "dpdxUpper",
-            "thetaLower", "deltaStarLower", "tauMaxLower", "dpdxLower"};
+            "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
+            "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"};
         
         
         codi::Jacobian<double> jacobian(jacobianHeight,Nin);
-        codi::Jacobian<double> jacobianAlpha(jacobianHeight,1);
+        codi::Jacobian<double> jacobianAlpha(2,1);
         
         std::vector<std::vector<double>> allGradients ;
         for (int i = 0; i < Nin; ++i) {   
@@ -227,7 +230,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
             }
         }
 
-        for (int n=0;n<jacobianHeight;++n){
+        for (int n=0;n<2;++n){
             jacobianAlpha(n,0) = alphad.getGradient()[n];
         }
 
@@ -248,9 +251,9 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
             
             j["d " + outputNames[i] + " / d ycoords"] = allGradients[i];
         }
-
+        
         std::vector<std::vector<double>> allGradientsAlf ;
-        for (int out = 0; out < jacobianHeight; ++out) {
+        for (int out = 0; out < 2; ++out) {
             std::vector<double> gradAlf;
             for (int i = 0; i < 1; ++i) {
                 gradAlf.push_back(jacobianAlpha(out, i));  // or however you compute the gradient

@@ -2,6 +2,7 @@
 #include <cmath>
 #include <Eigen/Dense>
 #include "real_type.h"
+#include "get_funcs.h"
 #include "data_structs.h"
 #include "vector_ops.hpp"
 #include "main_func.h"
@@ -193,6 +194,39 @@ Real interpolate_dpdx(const Real* xcoords, const Real* Cps, int found_idx, Real 
 }
 
 
+Real interpolate_cf(const Real* xcoords, const Real* states, const Vsol&vsol, int found_idx, Real x_target, const Param&param) {
+    
+    Real xs[4] = {
+        xcoords[found_idx - 1],
+        xcoords[found_idx],
+        xcoords[found_idx + 1],
+        xcoords[found_idx + 2]
+    };
+
+
+    Real cf[4];
+
+    int indexes[4] = {found_idx-1, found_idx, found_idx+1, found_idx +2} ;
+    Real cf_U[4] = {0};
+    for (int i=0;i<4;++i){
+        cf[i] = get_cf(
+            states[colMajorIndex(0,indexes[i],4)],
+            states[colMajorIndex(1,indexes[i],4)],
+            states[colMajorIndex(2,indexes[i],4)],
+            states[colMajorIndex(3,indexes[i],4)],
+            vsol.turb[indexes[i]],
+            false,
+            param,
+            cf_U
+        );
+    }
+    // Interpolate 
+    Real Cf95  = cubic_interp(x_target, xs, cf);
+
+    return Cf95;
+}
+
+
 
 /*
  * Master function to interpolate 4 flow quantities at 95% chord on both surfaces.
@@ -204,11 +238,13 @@ Real interpolate_dpdx(const Real* xcoords, const Real* Cps, int found_idx, Real 
  *   - interp_bottom: interpolated 4 values on bottom surface at 95% chord
  *   - interp_top: interpolated 4 values on top surface at 95% chord
  */
-void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, const Real*Cps, const Oper&oper, const Vsol&vsol,
-    Real (&topBLStates)[4],Real (&botBLStates)[4]) {
+void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, const Real*Cps, const Oper&oper, const Vsol&vsol, const Param&param,
+    Real (&topBLStates)[7],Real (&botBLStates)[7]) {
 
     Real x_target = 0.95;
     
+    /* State order, theta, delta*, tau_max, Ue, dpdx, tau_wall, delta 99% thickness*/
+
     //  --------------------------bot surface BL states interp -----------------------------------------
     int foundIndexBot = find_interp_position(xcoords,0,20,x_target);
     interpolate_on_surface(xcoords, states, foundIndexBot, x_target, botBLStates,vsol);
@@ -218,7 +254,18 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
     Real tauMaxBot = (botBLStates[2] * botBLStates[2]) * (oper.rho * (botBLStates[3]*botBLStates[3])) ;
     
     botBLStates[2] = tauMaxBot;
-    botBLStates[3] = dpdxBot;
+    botBLStates[4] = dpdxBot;
+
+    // tau_wall = Cf*(rho * ue^2) / 2
+    Real cfBot = interpolate_cf(xcoords,states,vsol,foundIndexBot,x_target,param);
+    Real tauWallBot = (cfBot/2) * oper.rho * botBLStates[3] * botBLStates[3] ;
+    botBLStates[5] = tauWallBot ;
+
+    // now get 99% thickness
+    Real deltaBot;
+    Real frictionVel = std::sqrt(tauWallBot/oper.rho) ;
+    turbulent_BL_profile_XFOIL(botBLStates[0],botBLStates[3],frictionVel,(param.muinf/oper.rho),deltaBot);
+    botBLStates[6] = deltaBot;
     
     // ---------------------------- top surface BL interp ------------------------------------------
     int foundIndexTop = find_interp_position(xcoords,Ncoords-20, Ncoords-1,x_target);
@@ -229,7 +276,19 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
     Real tauMaxTop = (topBLStates[2] * topBLStates[2]) * (oper.rho * (topBLStates[3]*topBLStates[3])) ;
 
     topBLStates[2] = tauMaxTop;
-    topBLStates[3] = dpdxTop;
+    topBLStates[4] = dpdxTop;
+
+    // tau_wall = Cf*(rho * ue^2) / 2
+    Real cfTop = interpolate_cf(xcoords,states,vsol,foundIndexTop,x_target,param);
+    Real tauWallTop = (cfTop/2) * oper.rho * topBLStates[3] * topBLStates[3] ;
+    topBLStates[5] = tauWallTop ;
+
+    // now get 99% thickness
+    Real deltaTop;
+    frictionVel = std::sqrt(tauWallTop/oper.rho) ;
+    turbulent_BL_profile_XFOIL(topBLStates[0],topBLStates[3],frictionVel,(param.muinf/oper.rho),deltaTop);
+    topBLStates[6] = deltaTop;
+
 }
 
 

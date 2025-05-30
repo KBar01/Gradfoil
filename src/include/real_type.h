@@ -4,8 +4,8 @@
 #ifdef USE_CODIPACK
     #include <codi.hpp>
     
-    #if DO_BL_GRADIENTS
-    using Real = codi::RealReverseVec<10>;
+    #if DO_BL_GRADIENT
+    using Real = codi::RealReverseVec<16>;
     #else
     using Real = codi::RealReverseVec<2>;
     #endif
