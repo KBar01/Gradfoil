@@ -11,8 +11,34 @@ BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
 EXEC_FWD = os.path.join(BIN_DIR, "CFoil_fwd")
 EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
 
+def use_xfoil(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,Uinf=1.0,chord=1.0,xfoilPath=None):
+    
+    cwd = os.getcwd()
+    in_json_path = os.path.join(cwd, "input.json")
+    data = {
+        "xcoords": xcoords,
+        "ycoords": ycoords,
+        "alpha_degrees": alphaDeg,
+        "Re": Re,
+        "Ma": Ma,
+        "restart": 0,
+        "xfoilstart":0,
+        "xfoilgetpoints":0,
+        "sampleTE": sampleTE,
+        "Uinf": Uinf,
+        "chord": chord
+    }
+
+    # Write JSON input
+    with open(in_json_path, "w") as f:
+        json.dump(data, f)
+    
+    
+    completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,EXEC_FWD,xfoilPath)
+    return completed
 
 def standard_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,Uinf=1.0,chord=1.0,xfoilPath=None):
+    
     
     cwd = os.getcwd()
     in_json_path = os.path.join(cwd, "input.json")
@@ -139,6 +165,15 @@ def standard_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,Uinf=1.0,c
 
     return (initConvergence or completed)
 
+
+def fwdRun(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,Uinf=1.0,chord=1.0,xfoilPath=None,xfoilStart=0):
+    
+    success = False
+    if xfoilStart == 0:
+        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,Uinf,chord,xfoilPath)
+    else:
+        success = use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,Uinf,chord,xfoilPath)
+    return success
 
 
 def grad_run():
