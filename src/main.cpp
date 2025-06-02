@@ -55,7 +55,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     
     
     Oper oper(alpha,Re,Ma);
-    Real Uinf = (Re*dynViscInf)/oper.rho*chordScale ; // for scaling the BL outputs later
+    Real Uinf = (Re*dynViscInf)/(oper.rho*chordScale) ; // for scaling the BL outputs later
 
     Geom geom;
     geom.chord = chordScale;

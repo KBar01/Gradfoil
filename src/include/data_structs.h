@@ -115,7 +115,7 @@ struct Wake {
 struct Oper {
     Real Vinf = 1.0;          // Velocity magnitude
     Real alpha = 0.0;         // Angle of attack (degrees)
-    Real rho = 1.0;           // Density
+    Real rho = 1.225;           // Density
     Real Re = 1e5;            // Reynolds number
     Real Ma = 0.0;            // Mach number
 
