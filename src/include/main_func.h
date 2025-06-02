@@ -67,8 +67,11 @@ void turbulent_BL_profile_XFOIL(
 
 
 void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, const Real*Cps, const Oper&oper, const Vsol&vsol, const Param&param,
-    Real (&topBLStates)[7],Real (&botBLStates)[7],const Real Uinf, const Geom&geom,const Real x_target);
+    Real (&topBLStates)[7],Real (&botBLStates)[7],const Real Uinf, const Geom&geom,const Real x_target
+);
 
 
+Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S);
+   
 
-    #endif
+#endif

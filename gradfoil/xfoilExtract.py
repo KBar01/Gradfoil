@@ -77,11 +77,11 @@ def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath):
     dat_file = 'airfoil.dat'
     xfoil_in = 'xfoil_input.txt'
     files = {
-        'n': 'bl_n.txt',
-        'ct': 'bl_ct.txt',
+        'n'  : 'bl_n.txt',
+        'ct' : 'bl_ct.txt',
         'top': 'bl_top.txt',
         'bot': 'bl_bot.txt',
-        'ue': 'bl_ue.txt'
+        'ue' : 'bl_ue.txt'
     }
 
     
@@ -125,24 +125,21 @@ def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath):
         return np.array(data)
 
     # Load all BL data
-    n_data = load_column_data(files['n'])
-    ct_data = load_column_data(files['ct'])
+    n_data   = load_column_data(files['n'])
+    ct_data  = load_column_data(files['ct'])
     top_data = load_column_data(files['top'])
     bot_data = load_column_data(files['bot'])
-    ue_data = load_column_data(files['ue'])
+    ue_data  = load_column_data(files['ue'])
 
     
     topDelta,topTheta = extract_foil_data(top_data)
     botDelta,botTheta = extract_foil_data(bot_data)
-
-    topN,botN = extract_ncrit_data(n_data)
+    topN,botN   = extract_ncrit_data(n_data)
     topCt,botCt = extract_foil_data(ct_data)
-    
     topUe,botUe = extract_foil_data(ue_data)
    
     th = np.concatenate((np.flip(botTheta), topTheta))
     ds = np.concatenate((np.flip(botDelta),topDelta))
-    
     sa = np.concatenate((np.flip(botCt), np.flip(botN), topN, topCt))
     ue = np.concatenate((np.flip(botUe), topUe))
 
@@ -176,21 +173,25 @@ def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath):
 
     return out,turb  # shape (4, N)
 
-def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,EXEC_FWD,xfoilPath):
+def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath):
     
 
     cwd = os.getcwd()
     in_json_path = os.path.join(cwd, "input.json")
     data = {
-        "xcoords": xcoords,
-        "ycoords": ycoords,
+        "xcoords":       xcoords,
+        "ycoords":       ycoords,
         "alpha_degrees": alphaDeg,
-        "Re": Re,
-        "Ma": Ma,
-        "restart": 0,
-        "xfoilstart":0,
+        "Re":            Re,
+        "Ma":            Ma,
+        "restart":       0,
+        "xfoilstart":    0,
         "xfoilgetpoints":1,
-        "sampleTE": sampleTE
+        "sampleTE":      sampleTE,
+        "X":             X,
+        "Y":             Y,
+        "Z":             Z,
+        "S":             S
     }
 
     # Write JSON input

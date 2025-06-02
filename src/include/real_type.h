@@ -6,6 +6,8 @@
     
     #if DO_BL_GRADIENT
     using Real = codi::RealReverseVec<16>;
+    #elif DO_SOUND
+    using Real = codi::RealReverseVec<3>;
     #else
     using Real = codi::RealReverseVec<2>;
     #endif
@@ -21,5 +23,6 @@
 #define Ncoords 200
 #define Nfine 501
 #define Nin 301
+#define Nsound 500
 
 #endif

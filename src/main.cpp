@@ -15,11 +15,15 @@
 
 using json = nlohmann::json;
 
-bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re, Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin], const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake],const Real sampleTE){
+bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re, Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin],
+ const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake],
+ const Real sampleTE,const Real X,const Real Y,const Real Z,const Real S){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
     Real outputs[16] ; // 12 if doing all gradients CL CD and BL states for both surfaces
+    #elif DO_SOUND
+    Real outputs[3];
     #else
     Real outputs[2] ; // only doing CL and CD gradients  (and fwd output)
     #endif
@@ -158,6 +162,8 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
 
     interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,param,topsurf,botsurf,Uinf,geom,(sampleTE*geom.chord));
 
+    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S);
+    
     auto end = std::chrono::high_resolution_clock::now();
 
     // Duration in milliseconds (or other units)
@@ -165,11 +171,15 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
 
     std::cout << "Elapsed time: " << duration.count() << " ms\n";
 
-
+    #if DO_SOUND
+    std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
+    #else
     std::vector<std::string> outputNames = {"CL", "CD",
         "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
         "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"
     };
+    #endif
+    
 
     # ifndef USE_CODIPACK
     if (converged){
@@ -202,7 +212,10 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
         out[outputNames[13]] = botsurf[4];
         out[outputNames[14]] = botsurf[5];
         out[outputNames[15]] = botsurf[6];
+        #elif DO_SOUND
+        out["OASPL"] = OASPL;
         #endif
+
         std::ofstream outFile("out.json");
         outFile << out.dump(4);  // pretty print with 4 spaces indentation
         outFile.close();
@@ -218,6 +231,9 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
 
         #if DO_BL_GRADIENT
         constexpr int jacobianHeight = 16;
+        
+        #elif DO_SOUND
+        constexpr int jacobianHeight = 3;
         #else
         constexpr int jacobianHeight = 2;
         #endif
@@ -227,6 +243,9 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
             outputs[2+i] = topsurf[i];
             outputs[2+7+i] = botsurf[i];
         }
+        
+        #elif DO_SOUND
+        outputs[2] = OASPL;
         #endif
         
         for (int i=0;i<jacobianHeight;++i){
@@ -330,6 +349,12 @@ int main(){
     int doXfoilStart = j["xfoilstart"].get<int>();
     int doGetPoints = j["xfoilgetpoints"].get<int>();
     Real sampleTE = j["sampleTE"].get<double>();
+
+    const Real X = j["X"].get<double>();
+    const Real Y = j["Y"].get<double>();
+    const Real Z = j["Z"].get<double>();
+    const Real S = j["S"].get<double>();
+
     
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
@@ -353,7 +378,7 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;

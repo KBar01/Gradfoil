@@ -11,45 +11,30 @@ BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
 EXEC_FWD = os.path.join(BIN_DIR, "CFoil_fwd")
 EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
 
-def use_xfoil(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,xfoilPath=None):
+def use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath):
     
-    cwd = os.getcwd()
-    in_json_path = os.path.join(cwd, "input.json")
-    data = {
-        "xcoords": xcoords,
-        "ycoords": ycoords,
-        "alpha_degrees": alphaDeg,
-        "Re": Re,
-        "Ma": Ma,
-        "restart": 0,
-        "xfoilstart":0,
-        "xfoilgetpoints":0,
-        "sampleTE": sampleTE
-    }
-
-    # Write JSON input
-    with open(in_json_path, "w") as f:
-        json.dump(data, f)
-    
-    
-    completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,EXEC_FWD,xfoilPath)
+    completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath)
     return completed
 
-def standard_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,xfoilPath=None):
+def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath):
     
     
     cwd = os.getcwd()
     in_json_path = os.path.join(cwd, "input.json")
     data = {
-        "xcoords": xcoords,
-        "ycoords": ycoords,
+        "xcoords":       xcoords,
+        "ycoords":       ycoords,
         "alpha_degrees": alphaDeg,
-        "Re": Re,
-        "Ma": Ma,
-        "restart": 0,
-        "xfoilstart":0,
+        "Re":            Re,
+        "Ma":            Ma,
+        "restart":       0,
+        "xfoilstart":    0,
         "xfoilgetpoints":0,
-        "sampleTE": sampleTE
+        "sampleTE":      sampleTE,
+        "X":             X,
+        "Y":             Y,
+        "Z":             Z,
+        "S":             S
     }
 
     # Write JSON input
@@ -162,18 +147,17 @@ def standard_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,xfoilPath=
     return (initConvergence or completed)
 
 
-def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,xfoilPath=None,xfoilStart=0):
+def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0):
     
     success = False
     if xfoilStart == 0:
-        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,xfoilPath)
+        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath)
     else:
-        success = use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,xfoilPath)
+        success =    use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath)
     return success
 
 
 def grad_run():
-
     # Run the AD version of the code, using known solution from fwd run
     result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
 
