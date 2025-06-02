@@ -176,7 +176,7 @@ def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath):
 
     return out,turb  # shape (4, N)
 
-def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,EXEC_FWD,xfoilPath):
+def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,EXEC_FWD,xfoilPath):
     
 
     cwd = os.getcwd()
@@ -189,7 +189,8 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,EXEC_FWD,xfoilPath):
         "Ma": Ma,
         "restart": 0,
         "xfoilstart":0,
-        "xfoilgetpoints":1
+        "xfoilgetpoints":1,
+        "sampleTE": sampleTE
     }
 
     # Write JSON input
