@@ -166,7 +166,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,Uinf=1.0,c
     return (initConvergence or completed)
 
 
-def fwdRun(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,Uinf=1.0,chord=1.0,xfoilPath=None,xfoilStart=0):
+def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,Uinf=1.0,chord=1.0,xfoilPath=None,xfoilStart=0):
     
     success = False
     if xfoilStart == 0:

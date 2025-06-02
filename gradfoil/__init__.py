@@ -1,3 +1,3 @@
-from .gradfoil import standard_run, grad_run
+from .gradfoil import fwd_run, grad_run
 
-__all__ = ['standard_run', 'grad_run']
+__all__ = ['fwd_run', 'grad_run']
