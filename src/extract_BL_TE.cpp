@@ -1,6 +1,5 @@
 #include <iostream>
 #include <cmath>
-#include <Eigen/Dense>
 #include "real_type.h"
 #include "get_funcs.h"
 #include "data_structs.h"
@@ -160,7 +159,7 @@ void interpolate_on_surface(const Real* xcoords, const Real* states, int found_i
 
 
 // Computes dp/dx at x_target using cubic interpolation + central finite difference
-Real interpolate_dpdx(const Real* xcoords, const Real* Cps, int found_idx, Real x_target, const Oper&oper) {
+Real interpolate_dpdx(const Real* xcoords, const Real* Cps, int found_idx, Real x_target, const Oper&oper,const Real Uinf) {
     
     
     Real h = 1e-6;  // Small step size for derivative approximation TODO: verfiy step is correct (convergence)
@@ -188,7 +187,7 @@ Real interpolate_dpdx(const Real* xcoords, const Real* Cps, int found_idx, Real 
     Real CpMinus = cubic_interp(x_minus, xs, ps);
 
     // Central finite difference
-    Real dpdx = ((CpPlus - CpMinus) / (2.0 * h)) / (0.5 * oper.rho * oper.Vinf*oper.Vinf);
+    Real dpdx = ((CpPlus - CpMinus) / (2.0 * h)) / (0.5 * oper.rho * Uinf*Uinf);
 
     return dpdx;
 }
@@ -239,17 +238,23 @@ Real interpolate_cf(const Real* xcoords, const Real* states, const Vsol&vsol, in
  *   - interp_top: interpolated 4 values on top surface at 95% chord
  */
 void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, const Real*Cps, const Oper&oper, const Vsol&vsol, const Param&param,
-    Real (&topBLStates)[7],Real (&botBLStates)[7]) {
+    Real (&topBLStates)[7],Real (&botBLStates)[7],const Real Uinf, const Geom&geom,const Real x_target) {
 
-    Real x_target = 0.95;
+    //Real x_target = 0.95;
     
-    /* State order, theta, delta*, tau_max, Ue, dpdx, tau_wall, delta 99% thickness*/
-
-    //  --------------------------bot surface BL states interp -----------------------------------------
+    /* State order: theta, delta*, tau_max, Ue, dpdx, tau_wall, delta 99% thickness*/
+    
+    //--------------------------------------------------------------------------------------------------------------- //
+    //----------------------------bot surface BL states interp ------------------------------------------------------ //
+    
     int foundIndexBot = find_interp_position(xcoords,0,20,x_target);
     interpolate_on_surface(xcoords, states, foundIndexBot, x_target, botBLStates,vsol);
-    Real dpdxBot = interpolate_dpdx(xcoords,Cps,foundIndexBot,x_target,oper);
+    Real dpdxBot = interpolate_dpdx(xcoords,Cps,foundIndexBot,x_target,oper,Uinf);
     
+    
+    Real ignore;
+    Real UeCorrected = (get_uk(botBLStates[3],param,ignore)) * Uinf;
+    botBLStates[3] = UeCorrected;
     // BLstate is C_tau ^ 0.5 , and C_tau = tau_max / (rho * Ue^2)
     Real tauMaxBot = (botBLStates[2] * botBLStates[2]) * (oper.rho * (botBLStates[3]*botBLStates[3])) ;
     
@@ -266,11 +271,16 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
     Real frictionVel = std::sqrt(tauWallBot/oper.rho) ;
     turbulent_BL_profile_XFOIL(botBLStates[0],botBLStates[3],frictionVel,(param.muinf/oper.rho),deltaBot);
     botBLStates[6] = deltaBot;
+
+    //--------------------------------------------------------------------------------------------------------------- //
+    //------------------------------- top surface BL interp --------------------------------------------------------- //
     
-    // ---------------------------- top surface BL interp ------------------------------------------
     int foundIndexTop = find_interp_position(xcoords,Ncoords-20, Ncoords-1,x_target);
     interpolate_on_surface(xcoords, states,foundIndexTop, x_target, topBLStates,vsol);
-    Real dpdxTop = interpolate_dpdx(xcoords,Cps,foundIndexTop,x_target,oper);
+    Real dpdxTop = interpolate_dpdx(xcoords,Cps,foundIndexTop,x_target,oper,Uinf);
+    
+    UeCorrected = (get_uk(topBLStates[3],param,ignore)) * Uinf;
+    topBLStates[3] = UeCorrected;
     
     // BLstate is C_tau ^ 0.5 , and C_tau = tau_max / (rho * Ue^2)
     Real tauMaxTop = (topBLStates[2] * topBLStates[2]) * (oper.rho * (topBLStates[3]*topBLStates[3])) ;

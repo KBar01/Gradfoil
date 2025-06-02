@@ -15,7 +15,7 @@
 
 using json = nlohmann::json;
 
-bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Real Re,const Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin], const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake]){
+bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re, Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin], const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake],const Real sampleTE){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -34,14 +34,31 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
             tape.registerInput(inYcoords[i]);
         }
         tape.registerInput(alphad);
-    
+        tape.registerInput(Re);
+        tape.registerInput(Ma);
     #endif
     //---------------------------- run calculation ----------------------------------------------------
 
     Real alpha = (alphad/180)*M_PI;
     
+    const Real rhoInf = 1.225;
+    const Real dynViscInf = 1.789e-5 ;
+    
+    Real minX = 0.5, maxX = 0.5;
+    for (int i=0;i<Nin;++i){
+        Real newMin = std::min(minX,inXcoords[i]);
+        Real newMax = std::max(maxX,inXcoords[i]);
+        minX = newMin ;
+        maxX = newMax ;
+    }
+    Real chordScale = maxX - minX ;
+    
+    
     Oper oper(alpha,Re,Ma);
+    Real Uinf = (Re*dynViscInf)/oper.rho*chordScale ; // for scaling the BL outputs later
+
     Geom geom;
+    geom.chord = chordScale;
     
     Real inCoords[2*Nin]={0};
     for (int i=0;i<Nin;++i){
@@ -51,7 +68,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
     Real flattenedCoords[2 * Ncoords]={0};
     make_panels(inCoords,flattenedCoords); // does spline to redist nodes over aerofoil for fixed number of 200 nodes
 
-    
+     
     
     if (doGetPoints){
         
@@ -139,7 +156,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
         ycoords[i] = flattenedCoords[colMajorIndex(1,i,2)];
     }
 
-    interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,param,topsurf,botsurf);
+    interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,param,topsurf,botsurf,Uinf,geom,(sampleTE*geom.chord));
 
     auto end = std::chrono::high_resolution_clock::now();
 
@@ -147,6 +164,12 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
     std::chrono::duration<double, std::milli> duration = end - start;
 
     std::cout << "Elapsed time: " << duration.count() << " ms\n";
+
+
+    std::vector<std::string> outputNames = {"CL", "CD",
+        "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
+        "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"
+    };
 
     # ifndef USE_CODIPACK
     if (converged){
@@ -158,26 +181,25 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
         restartFile.close();
 
         json out;
-        out["CL"]  = post.cl;
-        out["CD"]  = post.cd;
+        out[outputNames[0]]  = post.cl;
+        out[outputNames[1]]  = post.cd;
 
         #if DO_BL_GRADIENT
-        out["upperMomThickness"] = topsurf[0];
-        out["upperDispThickness"] = topsurf[1];
-        out["upperTauMax"] = topsurf[2];
-        out["upperEdgeVelocity"] = topsurf[3];
-        out["upperPressureGrad"] = topsurf[4];
-        out["upperTauWall"] = topsurf[5];
-        out["upperdelta99"] = topsurf[6];
+        out[outputNames[2]] = topsurf[0];
+        out[outputNames[3]] = topsurf[1];
+        out[outputNames[4]] = topsurf[2];
+        out[outputNames[5]] = topsurf[3];
+        out[outputNames[6]] = topsurf[4];
+        out[outputNames[7]] = topsurf[5];
+        out[outputNames[8]] = topsurf[6];
 
-
-        out["lowerMomThickness"] = botsurf[0];
-        out["lowerDispThickness"] = botsurf[1];
-        out["lowerTauMax"] = botsurf[2];
-        out["lowerEdgeVelocity"] = botsurf[3];
-        out["lowerPressureGrad"] = botsurf[4];
-        out["lowerTauWall"] = botsurf[5];
-        out["lowerDelta99"] = botsurf[6];
+        out[outputNames[9]] = botsurf[0];
+        out[outputNames[10]] = botsurf[1];
+        out[outputNames[11]] = botsurf[2];
+        out[outputNames[12]] = botsurf[3];
+        out[outputNames[13]] = botsurf[4];
+        out[outputNames[14]] = botsurf[5];
+        out[outputNames[15]] = botsurf[6];
         #endif
         std::ofstream outFile("out.json");
         outFile << out.dump(4);  // pretty print with 4 spaces indentation
@@ -215,13 +237,10 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
         
         tape.evaluate();
 
-        std::vector<std::string> outputNames = {"CL", "CD",
-            "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
-            "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"};
-        
-        
         codi::Jacobian<double> jacobian(jacobianHeight,Nin);
-        codi::Jacobian<double> jacobianAlpha(2,1);
+        codi::Jacobian<double> jacobianAlpha(jacobianHeight,1);
+        codi::Jacobian<double> jacobianRe(jacobianHeight,1);
+        codi::Jacobian<double> jacobianMa(jacobianHeight,1);
         
         std::vector<std::vector<double>> allGradients ;
         for (int i = 0; i < Nin; ++i) {   
@@ -230,8 +249,10 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
             }
         }
 
-        for (int n=0;n<2;++n){
+        for (int n=0;n<jacobianHeight;++n){
             jacobianAlpha(n,0) = alphad.getGradient()[n];
+            jacobianRe(n,0)    = Re.getGradient()[n];
+            jacobianMa(n,0)    = Ma.getGradient()[n];
         }
 
 
@@ -243,27 +264,25 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad,const Rea
             }
             allGradients.push_back(grad);
         }
-
-
         // Create JSON
         json j;
         for (int i = 0; i < allGradients.size(); ++i) {
-            
             j["d " + outputNames[i] + " / d ycoords"] = allGradients[i];
         }
         
-        std::vector<std::vector<double>> allGradientsAlf ;
-        for (int out = 0; out < 2; ++out) {
-            std::vector<double> gradAlf;
-            for (int i = 0; i < 1; ++i) {
-                gradAlf.push_back(jacobianAlpha(out, i));  // or however you compute the gradient
-            }
-            allGradientsAlf.push_back(gradAlf);
+        std::vector<double> allGradientsAlf ;
+        std::vector<double> allGradientsRe ;
+        std::vector<double> allGradientsMa ;
+        for (int out = 0; out<jacobianHeight; ++out) {
+            allGradientsAlf.push_back(jacobianAlpha(out, 0));
+            allGradientsRe.push_back(jacobianRe(out, 0));
+            allGradientsMa.push_back(jacobianMa(out, 0));
         }
         
         for (int i = 0; i < allGradientsAlf.size(); ++i) {
-            
             j["d " + outputNames[i] + " / d alpha"] = allGradientsAlf[i];
+            j["d " + outputNames[i] + " / d alpha"] = allGradientsRe[i];
+            j["d " + outputNames[i] + " / d alpha"] = allGradientsMa[i];
         }
         
         std::ofstream outFile("ad_gradients.json");
@@ -308,6 +327,7 @@ int main(){
     int doRestart = j["restart"].get<int>();
     int doXfoilStart = j["xfoilstart"].get<int>();
     int doGetPoints = j["xfoilgetpoints"].get<int>();
+    Real sampleTE = j["sampletTE"].get<double>();
     
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
@@ -331,7 +351,7 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;
