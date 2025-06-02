@@ -181,6 +181,8 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
         restartFile.close();
 
         json out;
+        out["aerofoilChord"] = chordScale;
+        out["freestreamVelocity"] = Uinf;
         out[outputNames[0]]  = post.cl;
         out[outputNames[1]]  = post.cd;
 
