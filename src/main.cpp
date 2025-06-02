@@ -281,8 +281,8 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
         
         for (int i = 0; i < allGradientsAlf.size(); ++i) {
             j["d " + outputNames[i] + " / d alpha"] = allGradientsAlf[i];
-            j["d " + outputNames[i] + " / d alpha"] = allGradientsRe[i];
-            j["d " + outputNames[i] + " / d alpha"] = allGradientsMa[i];
+            j["d " + outputNames[i] + " / d Re"] = allGradientsRe[i];
+            j["d " + outputNames[i] + " / d Ma"] = allGradientsMa[i];
         }
         
         std::ofstream outFile("ad_gradients.json");
