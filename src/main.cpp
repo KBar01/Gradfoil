@@ -327,7 +327,7 @@ int main(){
     int doRestart = j["restart"].get<int>();
     int doXfoilStart = j["xfoilstart"].get<int>();
     int doGetPoints = j["xfoilgetpoints"].get<int>();
-    Real sampleTE = j["sampletTE"].get<double>();
+    Real sampleTE = j["sampleTE"].get<double>();
     
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
