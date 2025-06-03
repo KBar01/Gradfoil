@@ -10,7 +10,7 @@ from .xfoilExtract import xfoil_start_run
 BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
 EXEC_FWD = os.path.join(BIN_DIR, "CFoil_fwd")
 EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
-
+EXEC_NOISE = os.path.join(BIN_DIR, "CFoil_Noise")
 def use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath):
     
     completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath)
@@ -157,9 +157,14 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
     return success
 
 
-def grad_run():
+def grad_run(doSound=0):
     # Run the AD version of the code, using known solution from fwd run
-    result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
+    if doSound:
+        result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
+        result = subprocess.run([EXEC_NOISE],cwd=os.getcwd(), capture_output=True, text=True)
+
+    else:
+        result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
 
 
 

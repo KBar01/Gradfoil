@@ -316,7 +316,11 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
             j["d " + outputNames[i] + " / d Ma"] = allGradientsMa[i];
         }
         
+        #if DO_SOUND
+        std::ofstream outFile("OASPL_gradients.json");
+        #else
         std::ofstream outFile("ad_gradients.json");
+        #endif
         outFile << j.dump(4);  // pretty-print with 4-space indentation
         outFile.close();
         

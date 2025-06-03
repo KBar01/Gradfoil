@@ -70,6 +70,9 @@ include_directories(${PROJECT_SOURCE_DIR}/src/include)
 #############################################
 file(GLOB_RECURSE SOURCES src/*.cpp)
 list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
+
+
+
 #############################################
 # Build Executables
 #############################################
@@ -81,6 +84,7 @@ target_compile_definitions(CFoil_fwd PRIVATE
   -DDO_SOUND=${DO_SOUND_DEFINE}
 )
 
+# --- CFoil_AD (DO_SOUND=OFF, DO_BL_GRADIENT=OFF)
 add_executable(CFoil_AD src/main.cpp ${SOURCES})
 target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
 
@@ -88,6 +92,15 @@ target_include_directories(CFoil_AD PRIVATE
     ${codipack_SOURCE_DIR}/include
 )
 
+if (DO_SOUND)
+target_compile_definitions(CFoil_AD PRIVATE
+  -DUSE_CODIPACK
+  -DCODI_EnableEigen 
+  -DCODI_ForcedInlines
+  -DDO_BL_GRADIENT=0
+  -DDO_SOUND=0
+)
+else()
 target_compile_definitions(CFoil_AD PRIVATE
   -DUSE_CODIPACK
   -DCODI_EnableEigen 
@@ -95,3 +108,18 @@ target_compile_definitions(CFoil_AD PRIVATE
   -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
   -DDO_SOUND=${DO_SOUND_DEFINE}
 )
+endif()
+
+# --- CFoil_Noise (only if DO_SOUND=ON)
+if(DO_SOUND)
+  add_executable(CFoil_Noise src/main.cpp ${SOURCES})
+  target_link_libraries(CFoil_Noise PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
+  target_include_directories(CFoil_Noise PRIVATE ${codipack_SOURCE_DIR}/include)
+  target_compile_definitions(CFoil_Noise PRIVATE
+    -DUSE_CODIPACK
+    -DCODI_EnableEigen
+    -DCODI_ForcedInlines
+    -DDO_BL_GRADIENT=0
+    -DDO_SOUND=1
+  )
+endif()
