@@ -11,7 +11,7 @@
 using json = nlohmann::json;
 
 
-void calc_Spp_Rozenburg(Real theta,Real deltaStar,Real delta,Real tau, Real edgeVel,Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,Real Uinf, Real X,Real Y,Real Z, Real S){
+void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,const Real tau,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S){
 
     // start exp : 2 (100Hz)
     // final exp : 4.30103 (20,000 Hz)
@@ -29,7 +29,7 @@ void calc_Spp_Rozenburg(Real theta,Real deltaStar,Real delta,Real tau, Real edge
     }
 }
 
-void calc_Spp_Goody(Real theta,Real deltaStar,Real delta,Real tau, Real edgeVel,Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf, const Real X,const Real Y,const Real Z, const Real S){
+void calc_Spp_Goody(const Real theta,const Real deltaStar,const Real delta,const Real tau,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf, const Real X,const Real Y,const Real Z, const Real S){
 
     // start exp : 2 (100Hz)
     // final exp : 4.30103 (20,000 Hz)
