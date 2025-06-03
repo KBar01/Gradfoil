@@ -24,7 +24,7 @@ class BuildWithCMake(build_py):
         os.makedirs(output_bin_dir, exist_ok=True)
         shutil.copy(os.path.join(build_dir, "CFoil_fwd"), output_bin_dir)
         shutil.copy(os.path.join(build_dir, "CFoil_AD"), output_bin_dir)
-
+        shutil.copy(os.path.join(build_dir, "CFoil_Noise"), output_bin_dir)
         # 3. Continue with the normal Python build
         super().run()
 
@@ -42,7 +42,7 @@ setup(
     },
     install_requires=[],
     python_requires=">=3.7",
-    author="Your Name",
+    author="Kieran Barry",
     description="Python interface to CFoil tools",
     long_description=open("README.md").read() if os.path.exists("README.md") else "",
     long_description_content_type="text/markdown",
