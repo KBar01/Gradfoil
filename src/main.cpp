@@ -244,13 +244,17 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
         outputs[1] = post.cd;
         #endif
 
+        #if DO_SOUND
+        tape.registerOutput(outputs);
+        tape.setPassive();
+        outputs.gradient() = 1.0 ;
+        #else
         for (int i=0;i<jacobianHeight;++i){
             tape.registerOutput(outputs[i]);
         }
-            
         tape.setPassive();
-
         for (int i=0;i<jacobianHeight;++i){outputs[i].gradient()[i] = 1.0 ;}
+        #endif
         
         tape.evaluate();
 
@@ -259,18 +263,28 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
         codi::Jacobian<double> jacobianRe(jacobianHeight,1);
         codi::Jacobian<double> jacobianMa(jacobianHeight,1);
         
+        #if DO_SOUND
+        std::vector<std::vector<double>> allGradients ;
+        for (int i = 0; i < Nin; ++i) {    
+            jacobian(0,i) = inYcoords[i].getGradient();
+        }
+        jacobianAlpha(0,0) = alphad.getGradient();
+        jacobianRe(0,0)    = Re.getGradient();
+        jacobianMa(0,0)    = Ma.getGradient();
+        #else
         std::vector<std::vector<double>> allGradients ;
         for (int i = 0; i < Nin; ++i) {   
             for (int n=0;n<jacobianHeight;++n){
                 jacobian(n,i) = inYcoords[i].getGradient()[n];
             }
         }
-
         for (int n=0;n<jacobianHeight;++n){
             jacobianAlpha(n,0) = alphad.getGradient()[n];
             jacobianRe(n,0)    = Re.getGradient()[n];
             jacobianMa(n,0)    = Ma.getGradient()[n];
         }
+        #endif
+        
 
 
         // Fill allGradients
