@@ -74,7 +74,7 @@ void compute_Psi_L(
     psi_i = S_r * T_i + S_i * T_r;
 }
 
-void seper_calc_lift(const Real kx,const Real ks,const Real kc,const Real C,const Real MX,const Real beta,const Real mu, Real & psi_LR,Real & psi_LI) {
+void seper_calc_lift(Real kx,Real ks,Real kc,Real C,Real MX,Real beta,Real mu, Real & psi_LR,Real & psi_LI) {
     
     //Real beta = sqrt(1.0 - MX * MX);
     //Real mu = Mc * kx / (beta * beta);
@@ -132,12 +132,12 @@ void seper_calc_lift(const Real kx,const Real ks,const Real kc,const Real C,cons
     
     Real u,v ;
     # ifdef USE_CODIPACK
-    const double x_val = erf1InputR.getValue() ;
-    const double y_val = erf1InputI.getValue() ;
-    const complex<double> z(x_val,y_val) ;
-    const complex<double> w = Faddeeva::erf(z);
+    double x_val = erf1InputR.getValue() ;
+    double y_val = erf1InputI.getValue() ;
+    complex<double> z(x_val,y_val) ;
+    complex<double> w = Faddeeva::erf(z);
     
-    const std::complex<double> dw_dz = (2.0 / sqrt(M_PI)) * exp(-z * z); // Derivative
+    std::complex<double> dw_dz = (2.0 / sqrt(M_PI)) * exp(-z * z); // Derivative
 
     // Compute real and imag parts of Jacobian
     double du_dx = dw_dz.real();        // ∂Re(w)/∂x
@@ -150,8 +150,7 @@ void seper_calc_lift(const Real kx,const Real ks,const Real kc,const Real C,cons
     ph.startPushStatement();
     ph.pushArgument(erf1InputR, du_dx);
     ph.pushArgument(erf1InputI, du_dy);
-    const double tmp = w.real();
-    ph.endPushStatement(u, tmp);
+    ph.endPushStatement(u, w.real());
 
 
     // Push statement for v = Im(w)
@@ -224,7 +223,7 @@ void seper_calc_lift(const Real kx,const Real ks,const Real kc,const Real C,cons
 
 
 // Translated model_lift function
-Real model_lift(const Real kx, const Real ks, const Real kc, const Real C, const Real Mc, const Real MX) {
+Real model_lift(Real kx, Real ks, Real kc, Real C, Real Mc, Real MX) {
     
     
     const Real beta = std::sqrt(1.0 - MX * MX);
@@ -256,9 +255,9 @@ Real model_lift(const Real kx, const Real ks, const Real kc, const Real C, const
 
 // Translated calc_Spp_Freq
 Real calc_Spp_Freq(
-    const Real c0, const Real rho0, const Real C,const Real MX, const Real omega,
-    const Real X, const Real Y, const Real Z,
-    const Real S,const Real Phi_qq_input,const int Order
+    Real c0,  Real rho0, Real C,Real MX, Real omega,
+    Real X, Real Y, Real Z,
+    Real S, Real Phi_qq_input,int Order
 ) {
     const Real beta = sqrt(1.0 - (MX*MX));
     const Real s = sqrt(X*X + beta*beta *(Y*Y + Z*Z));

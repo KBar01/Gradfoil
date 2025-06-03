@@ -23,7 +23,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     #if DO_BL_GRADIENT
     Real outputs[16] ; // 12 if doing all gradients CL CD and BL states for both surfaces
     #elif DO_SOUND
-    Real outputs[3];
+    Real outputs;
     #else
     Real outputs[2] ; // only doing CL and CD gradients  (and fwd output)
     #endif
@@ -72,8 +72,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     Real flattenedCoords[2 * Ncoords]={0};
     make_panels(inCoords,flattenedCoords); // does spline to redist nodes over aerofoil for fixed number of 200 nodes
 
-     
-    
+
     if (doGetPoints){
         
         #ifndef USE_CODIPACK
@@ -172,7 +171,8 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     std::cout << "Elapsed time: " << duration.count() << " ms\n";
 
     #if DO_SOUND
-    std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
+    //std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
+    std::vector<std::string> outputNames = {"OASPL"};
     #else
     std::vector<std::string> outputNames = {"CL", "CD",
         "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
@@ -193,8 +193,8 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
         json out;
         out["aerofoilChord"] = chordScale;
         out["freestreamVelocity"] = Uinf;
-        out[outputNames[0]]  = post.cl;
-        out[outputNames[1]]  = post.cd;
+        out["CL"]  = post.cl;
+        out["CD"]  = post.cd;
 
         #if DO_BL_GRADIENT
         out[outputNames[2]] = topsurf[0];
@@ -226,28 +226,24 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     // ------------------------ Doing Adjoint: register and store gradients ----------------------------------
     #ifdef USE_CODIPACK
 
-        outputs[0] = post.cl;
-        outputs[1] = post.cd;
 
         #if DO_BL_GRADIENT
         constexpr int jacobianHeight = 16;
-        
-        #elif DO_SOUND
-        constexpr int jacobianHeight = 3;
-        #else
-        constexpr int jacobianHeight = 2;
-        #endif
-
-        #if DO_BL_GRADIENT
+        outputs[0] = post.cl;
+        outputs[1] = post.cd;
         for (int i=0;i<7;++i){
             outputs[2+i] = topsurf[i];
             outputs[2+7+i] = botsurf[i];
         }
-        
         #elif DO_SOUND
-        outputs[2] = OASPL;
+        constexpr int jacobianHeight = 1;
+        outputs = OASPL;
+        #else
+        constexpr int jacobianHeight = 2;
+        outputs[0] = post.cl;
+        outputs[1] = post.cd;
         #endif
-        
+
         for (int i=0;i<jacobianHeight;++i){
             tape.registerOutput(outputs[i]);
         }

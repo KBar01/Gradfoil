@@ -19,9 +19,9 @@ Real calc_S_qq_Amiet_goody(
 
 
 Real calc_Spp_Freq(
-    const Real c0, const Real rho0, const Real C,const Real MX, const Real omega,
-    const Real X, const Real Y, const Real Z,
-    const Real S,const Real Phi_qq_input,const int Order
+    Real c0,  Real rho0, Real C,Real MX, Real omega,
+    Real X, Real Y, Real Z,
+    Real S, Real Phi_qq_input,int Order
 );
 
 #endif
