@@ -4,7 +4,7 @@ import numpy as np
 import os
 import tempfile
 from importlib.resources import files
-
+import csv
 
 
 def extract_foil_data(array):
@@ -109,9 +109,22 @@ def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath):
 
     # Run XFOIL
     #/mnt/c/Users/pa20830/XFOIL6.99/xfoil.exe
-    subprocess.run([xfoiPath],
-                   input=open(xfoil_in).read(),
-                   text=True)
+    result = subprocess.run([xfoiPath],input=open(xfoil_in).read(),text=True,stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE)
+
+    # Parse CL from output
+    cl_value = None
+    for line in result.stdout.splitlines():
+        if "CL =" in line:
+            try:
+                cl_value = float(line.split("CL =")[1].split()[0])
+                break
+            except (IndexError, ValueError):
+                continue
+    
+    if cl_value is None:
+        print("Warning: CL value not found in XFOIL output.")
+
 
     def load_column_data(file):
         data = []
@@ -171,9 +184,9 @@ def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath):
         if os.path.exists(f):
             os.remove(f)
 
-    return out,turb  # shape (4, N)
+    return out,turb,cl_value  # shape (4, N)
 
-def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf):
+def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf,trackCLs):
     
 
     cwd = os.getcwd()
@@ -218,7 +231,8 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfo
     chord = np.max(xcoords) - np.min(xcoords)
     ReXfoil = Re/chord
 
-    xfoilStates,xfoilturb = run_xfoil_get_BL_states(innerFoil,alphaDeg,ReXfoil,Ma,xfoilPath)
+    xfoilStates,xfoilturb,xfoilCL = run_xfoil_get_BL_states(innerFoil,alphaDeg,ReXfoil,Ma,xfoilPath)
+    xfoilCL /= chord
     # save them to json
     xfoil_json_path = os.path.join(cwd, "xfoilstates.json")
     data = {
@@ -237,5 +251,32 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfo
     
     Result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
     converged = Result.returncode
+
+
+    if trackCLs:
+        # Get CL value from JSON output
+        out_json_path = os.path.join(cwd, "out.json")
+        with open(out_json_path, "r") as f:
+            data = json.load(f)
+        cppCL = data["CL"]
+
+        # CSV file path
+        cl_log_path = os.path.join(cwd, "trackCLs.csv")
+
+        # Check if file exists
+        file_exists = os.path.isfile(cl_log_path)
+
+        # Open the CSV in append mode
+        with open(cl_log_path, mode='a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+
+            # Write header if file doesn't exist
+            if not file_exists:
+                writer.writerow(["xfoilCL", "cppCL"])
+
+            # Write the current CL values
+            writer.writerow([xfoilCL, cppCL])
+
+
 
     return converged
