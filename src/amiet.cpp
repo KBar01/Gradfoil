@@ -150,7 +150,7 @@ void seper_calc_lift(const Real kx,const Real ks,const Real kc,const Real C,cons
     ph.startPushStatement();
     ph.pushArgument(erf1InputR, du_dx);
     ph.pushArgument(erf1InputI, du_dy);
-    double tmp = w.real()
+    double tmp = w.real();
     ph.endPushStatement(u, tmp);
 
 
