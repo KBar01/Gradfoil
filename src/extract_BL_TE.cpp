@@ -187,7 +187,7 @@ Real interpolate_dpdx(const Real* xcoords, const Real* Cps, int found_idx, Real 
     Real CpMinus = cubic_interp(x_minus, xs, ps);
 
     // Central finite difference
-    Real dpdx = ((CpPlus - CpMinus) / (2.0 * h)) / (0.5 * oper.rho * Uinf*Uinf);
+    Real dpdx = ((CpPlus - CpMinus) / (2.0 * h)) * (0.5 * oper.rho * Uinf*Uinf);
 
     return dpdx;
 }
