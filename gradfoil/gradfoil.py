@@ -11,12 +11,12 @@ BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
 EXEC_FWD = os.path.join(BIN_DIR, "CFoil_fwd")
 EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
 EXEC_NOISE = os.path.join(BIN_DIR, "CFoil_Noise")
-def use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath):
+def use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf):
     
-    completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath)
+    completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf)
     return completed
 
-def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath):
+def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf):
     
     
     cwd = os.getcwd()
@@ -34,7 +34,9 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath):
         "X":             X,
         "Y":             Y,
         "Z":             Z,
-        "S":             S
+        "S":             S,
+        "Uinf":          Uinf,
+        "custUinf":      custUinf
     }
 
     # Write JSON input
@@ -139,7 +141,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath):
         if (not completed) and (xfoilPath != None):
 
             # c++ code not converging, use xfoil to give an initial starting point
-            completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,EXEC_FWD,xfoilPath)
+            completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,EXEC_FWD,xfoilPath,Uinf,custUinf)
         
         return completed
     
@@ -147,13 +149,13 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath):
     return (initConvergence or completed)
 
 
-def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0):
+def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0,Uinf=1,custUinf=0):
     
     success = False
     if xfoilStart == 0:
-        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath)
+        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf)
     else:
-        success =    use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath)
+        success =    use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf)
     return success
 
 

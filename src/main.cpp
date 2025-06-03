@@ -17,7 +17,8 @@ using json = nlohmann::json;
 
 bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re, Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin],
  const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake],
- const Real sampleTE,const Real X,const Real Y,const Real Z,const Real S){
+ const Real sampleTE,const Real X,const Real Y,const Real Z,const Real S,
+ Real Uinf,const int useCustUinf){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -59,8 +60,11 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     
     
     Oper oper(alpha,Re,Ma);
-    Real Uinf = (Re*dynViscInf)/(oper.rho*chordScale) ; // for scaling the BL outputs later
-
+    
+    
+    if (!useCustUinf){
+        Uinf = (Re*dynViscInf)/(oper.rho*chordScale) ; // for scaling the BL outputs later
+    }
     Geom geom;
     geom.chord = chordScale;
     
@@ -371,7 +375,8 @@ int main(){
     int doXfoilStart = j["xfoilstart"].get<int>();
     int doGetPoints = j["xfoilgetpoints"].get<int>();
     Real sampleTE = j["sampleTE"].get<double>();
-
+    Real customUinf = j["Uinf"].get<double>();
+    int useCustUinf = j["custUinf"].get<int>();
     const Real X = j["X"].get<double>();
     const Real Y = j["Y"].get<double>();
     const Real Z = j["Z"].get<double>();
@@ -400,7 +405,7 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;
