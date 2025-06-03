@@ -60,7 +60,10 @@ FetchContent_MakeAvailable(json)
 #############################################
 # Include your own headers
 #############################################
-include_directories(${PROJECT_SOURCE_DIR}/src/include)
+# Common include directory for all targets (if needed)
+set(COMMON_INCLUDES ${PROJECT_SOURCE_DIR}/src/include)
+set(NOISE_INCLUDES ${PROJECT_SOURCE_DIR}/src/noise_includes)
+#include_directories(${PROJECT_SOURCE_DIR}/src/include)
 
 # Include CoDiPack manually (header-only)
 #include_directories(${codipack_SOURCE_DIR}/include)
@@ -76,50 +79,100 @@ list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 #############################################
 # Build Executables
 #############################################
+
+
+# Issue with custom derivative rules and codipack vector mode means
+# generating 2 seperate AD scripts when doing OASPL gradient
+#
+# When DO_SOUND= true : 
+# Cfoil_Noise returns just gradient of OASPL and Cfoil_AD retuns
+# gradient of CL and CD
+
+
+
+################## FWD MODE: includes everything ###############################################
 add_executable(CFoil_fwd src/main.cpp ${SOURCES})
+
 target_link_libraries(CFoil_fwd Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
+
+target_include_directories(CFoil_fwd PRIVATE
+ ${COMMON_INCLUDES}
+ ${NOISE_INCLUDES}
+)
+
 target_compile_definitions(CFoil_fwd PRIVATE
   -DCODI_EnableEigen
   -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
   -DDO_SOUND=${DO_SOUND_DEFINE}
 )
 
-# --- CFoil_AD (DO_SOUND=OFF, DO_BL_GRADIENT=OFF)
-add_executable(CFoil_AD src/main.cpp ${SOURCES})
-target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
 
-target_include_directories(CFoil_AD PRIVATE
-    ${codipack_SOURCE_DIR}/include
-)
-
-if (DO_SOUND)
-target_compile_definitions(CFoil_AD PRIVATE
-  -DUSE_CODIPACK
-  -DCODI_EnableEigen 
-  -DCODI_ForcedInlines
-  -DDO_BL_GRADIENT=0
-  -DDO_SOUND=0
-)
-else()
-target_compile_definitions(CFoil_AD PRIVATE
-  -DUSE_CODIPACK
-  -DCODI_EnableEigen 
-  -DCODI_ForcedInlines
-  -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
-  -DDO_SOUND=${DO_SOUND_DEFINE}
-)
-endif()
-
-# --- CFoil_Noise (only if DO_SOUND=ON)
+################### NOISE AD CODE (only if DO_SOUND=ON) ##########################################
 if(DO_SOUND)
+  
   add_executable(CFoil_Noise src/main.cpp ${SOURCES})
+  
   target_link_libraries(CFoil_Noise PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
-  target_include_directories(CFoil_Noise PRIVATE ${codipack_SOURCE_DIR}/include)
+  
+  target_include_directories(CFoil_Noise PRIVATE
+  
+    ${COMMON_INCLUDES}
+    ${NOISE_INCLUDES} 
+    ${codipack_SOURCE_DIR}/include
+  )
+  
   target_compile_definitions(CFoil_Noise PRIVATE
     -DUSE_CODIPACK
     -DCODI_EnableEigen
     -DCODI_ForcedInlines
     -DDO_BL_GRADIENT=0
     -DDO_SOUND=1
+  )
+endif()
+
+
+############## Main AD CODE, retuns CL,CD unless BL_GRADIENT=ON, return BL states grads ##########
+list(REMOVE_ITEM SOURCES
+ "${CMAKE_SOURCE_DIR}/src/amiet.cpp"
+ "${CMAKE_SOURCE_DIR}/src/error_package.cpp"
+ "${CMAKE_SOURCE_DIR}/src/fresenel.cpp"
+ "${CMAKE_SOURCE_DIR}/src/sound.cpp"
+ "${CMAKE_SOURCE_DIR}/src/WPSmodels.cpp")
+
+if (DO_SOUND)
+  
+  add_executable(CFoil_AD src/main.cpp ${SOURCES})
+  
+  target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
+
+  target_include_directories(CFoil_AD PRIVATE
+    ${COMMON_INCLUDES}
+    ${codipack_SOURCE_DIR}/include
+  )
+
+  target_compile_definitions(CFoil_AD PRIVATE
+    -DUSE_CODIPACK
+    -DCODI_EnableEigen 
+    -DCODI_ForcedInlines
+    -DDO_BL_GRADIENT=0
+    -DDO_SOUND=0
+  )
+else()
+  
+  add_executable(CFoil_AD src/main.cpp ${SOURCES})
+  
+  target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
+
+  target_include_directories(CFoil_AD PRIVATE
+    ${COMMON_INCLUDES}
+    ${codipack_SOURCE_DIR}/include
+  )
+
+  target_compile_definitions(CFoil_AD PRIVATE
+    -DUSE_CODIPACK
+    -DCODI_EnableEigen 
+    -DCODI_ForcedInlines
+    -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
+    -DDO_SOUND=0
   )
 endif()

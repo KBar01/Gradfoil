@@ -161,8 +161,16 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
 
     interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,param,topsurf,botsurf,Uinf,geom,(sampleTE*geom.chord));
 
+
+    // if codipack, only use sound code if sound flag on. if not codipack run sound regardless
+    #ifdef USE_CODIPACK
+    #if DO_SOUND
     Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S);
-    
+    #endif
+    #else
+    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S);
+    #endif
+
     auto end = std::chrono::high_resolution_clock::now();
 
     // Duration in milliseconds (or other units)

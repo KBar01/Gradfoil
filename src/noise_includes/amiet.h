@@ -3,6 +3,7 @@
 
 #include "real_type.h"
 
+
 Real calc_S_qq_Amiet_rozenberg(const Real Ux,const Real omega,const Real rho,const Real tau_w,
     const Real delta,const Real delta_star,const Real theta,const Real dpdx);
 
