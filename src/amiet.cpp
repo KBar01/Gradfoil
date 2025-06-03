@@ -132,12 +132,12 @@ void seper_calc_lift(const Real kx,const Real ks,const Real kc,const Real C,cons
     
     Real u,v ;
     # ifdef USE_CODIPACK
-    double x_val = erf1InputR.getValue() ;
-    double y_val = erf1InputI.getValue() ;
-    complex<double> z(x_val,y_val) ;
-    complex<double> w = Faddeeva::erf(z);
+    const double x_val = erf1InputR.getValue() ;
+    const double y_val = erf1InputI.getValue() ;
+    const complex<double> z(x_val,y_val) ;
+    const complex<double> w = Faddeeva::erf(z);
     
-    std::complex<double> dw_dz = (2.0 / sqrt(M_PI)) * exp(-z * z); // Derivative
+    const std::complex<double> dw_dz = (2.0 / sqrt(M_PI)) * exp(-z * z); // Derivative
 
     // Compute real and imag parts of Jacobian
     double du_dx = dw_dz.real();        // ∂Re(w)/∂x
