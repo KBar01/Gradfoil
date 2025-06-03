@@ -269,7 +269,7 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
     // now get 99% thickness
     Real deltaBot;
     Real frictionVel = std::sqrt(tauWallBot/oper.rho) ;
-    turbulent_BL_profile_XFOIL(botBLStates[0],botBLStates[3],frictionVel,(param.muinf/oper.rho),deltaBot);
+    turbulent_BL_profile_XFOIL(botBLStates[0],botBLStates[3],frictionVel,((1.789e-5)/oper.rho),deltaBot);
     botBLStates[6] = deltaBot;
 
     //--------------------------------------------------------------------------------------------------------------- //
@@ -296,7 +296,7 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
     // now get 99% thickness
     Real deltaTop;
     frictionVel = std::sqrt(tauWallTop/oper.rho) ;
-    turbulent_BL_profile_XFOIL(topBLStates[0],topBLStates[3],frictionVel,(param.muinf/oper.rho),deltaTop);
+    turbulent_BL_profile_XFOIL(topBLStates[0],topBLStates[3],frictionVel,((1.789e-5)/oper.rho),deltaTop);
     topBLStates[6] = deltaTop;
 
 }
