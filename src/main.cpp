@@ -18,7 +18,7 @@ using json = nlohmann::json;
 bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re, Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin],
  const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake],
  const Real sampleTE,const Real X,const Real Y,const Real Z,const Real S,
- Real Uinf,const int useCustUinf){
+ Real Uinf,const int useCustUinf,const int doCps){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -228,6 +228,53 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
         out["OASPL"] = OASPL;
         #endif
 
+
+        if (doCps){
+
+            //  calc transition point
+            Real botTransX = geom.chord;
+            for(int i=0;i<isol.stagIndex[0];++i){
+                int isTurb = vsol.turb[isol.stagIndex[0] - i];
+                if (isTurb){
+                    botTransX = foil.x[colMajorIndex(0,isol.stagIndex[0]-i,2)];
+                    break;
+                } 
+            }
+            Real topTransX = geom.chord;
+            for(int i=0;i<200-isol.stagIndex[1];++i){
+                int isTurb = vsol.turb[isol.stagIndex[1] + i];
+                if (isTurb){
+                    topTransX = foil.x[colMajorIndex(0,isol.stagIndex[1]+i,2)];
+                    break;
+                } 
+            }
+            out["innerFoil"] = foil.x;
+            out["Cp"] = post.cp;
+            out["stagnation"] = isol.stagIndex;
+            out["topTransX"]  = topTransX;
+            out["botTransX"]  = botTransX;
+
+            std::vector<std::string> BLoutputNames = {"CL", "CD",
+                "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
+                "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"
+            };
+            out[BLoutputNames[2]] = topsurf[0];
+            out[BLoutputNames[3]] = topsurf[1];
+            out[BLoutputNames[4]] = topsurf[2];
+            out[BLoutputNames[5]] = topsurf[3];
+            out[BLoutputNames[6]] = topsurf[4];
+            out[BLoutputNames[7]] = topsurf[5];
+            out[BLoutputNames[8]] = topsurf[6];
+
+            out[BLoutputNames[9]] = botsurf[0];
+            out[BLoutputNames[10]] = botsurf[1];
+            out[BLoutputNames[11]] = botsurf[2];
+            out[BLoutputNames[12]] = botsurf[3];
+            out[BLoutputNames[13]] = botsurf[4];
+            out[BLoutputNames[14]] = botsurf[5];
+            out[BLoutputNames[15]] = botsurf[6];
+        }
+
         std::ofstream outFile("out.json");
         outFile << out.dump(4);  // pretty print with 4 spaces indentation
         outFile.close();
@@ -381,6 +428,7 @@ int main(){
     const Real Y = j["Y"].get<double>();
     const Real Z = j["Z"].get<double>();
     const Real S = j["S"].get<double>();
+    const int doCps = j["returnData"].get<int>();
 
     
     Real initStates[RVdimension] = {0};
@@ -405,7 +453,7 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;

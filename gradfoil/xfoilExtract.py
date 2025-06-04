@@ -190,6 +190,7 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfo
     
 
     cwd = os.getcwd()
+    returnFoilCps = 0
     in_json_path = os.path.join(cwd, "input.json")
     data = {
         "xcoords":       xcoords,
@@ -206,7 +207,8 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfo
         "Z":             Z,
         "S":             S,
         "Uinf":          Uinf,
-        "custUinf":      custUinf
+        "custUinf":      custUinf,
+        "returnData":    returnFoilCps
     }
 
     # Write JSON input
