@@ -5,6 +5,7 @@
 #include "real_type.h"
 #include "data_structs.h"
 #include "main_func.h"
+#include "get_funcs.h"
 #include "panel_funcs.h"
 #include <chrono>
 #include <fstream>
@@ -152,6 +153,27 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     Post post;
     calc_force(oper,geom,param,isol,foil,glob,post);
 
+    #ifndef USE_CODIPACK
+    Real Cf_Uinf[Ncoords];
+    if (doCps){
+        Real cf_U[4]={0};
+        for (int i=0;i<Ncoords;++i){
+            Cf_Uinf[i] = get_cf(glob.U[colMajorIndex(0,i,4)],
+                                glob.U[colMajorIndex(1,i,4)],
+                                glob.U[colMajorIndex(2,i,4)],
+                                glob.U[colMajorIndex(3,i,4)],
+                                vsol.turb[i],
+                                false,
+                                param,
+                                cf_U
+            );
+            
+            Cf_Uinf[i] *= ((glob.U[colMajorIndex(3,i,4)] * glob.U[colMajorIndex(3,i,4)])/(Uinf*Uinf));
+        }
+    }
+    #endif
+
+
     Real topsurf[7],botsurf[7];
     // retusn theta,delta*, tau_max, dp/dx, ue on each surface at 95% chord
 
@@ -253,7 +275,8 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
             out["stagnation"] = isol.stagIndex;
             out["topTransX"]  = topTransX;
             out["botTransX"]  = botTransX;
-
+            
+            out["Cf"] = Cf_Uinf;
             std::vector<std::string> BLoutputNames = {"CL", "CD",
                 "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
                 "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"
