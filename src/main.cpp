@@ -19,7 +19,7 @@ using json = nlohmann::json;
 bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re, Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin],
  const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake],
  const Real sampleTE,const Real X,const Real Y,const Real Z,const Real S,
- Real Uinf,const int useCustUinf,const int doCps){
+ Real Uinf,const int useCustUinf,const int doCps,const Real nCrit){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -94,6 +94,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     Foil foil(flattenedCoords);
     Isol isol;
     Param param;
+    param.ncrit = nCrit;
     Wake wake;
     Vsol vsol;
     
@@ -168,7 +169,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
                                 cf_U
             );
             
-            Cf_Uinf[i] *= ((glob.U[colMajorIndex(3,i,4)] * glob.U[colMajorIndex(3,i,4)])/(Uinf*Uinf));
+            Cf_Uinf[i] *= ((glob.U[colMajorIndex(3,i,4)] * glob.U[colMajorIndex(3,i,4)]));
         }
     }
     #endif
@@ -451,6 +452,7 @@ int main(){
     const Real Y = j["Y"].get<double>();
     const Real Z = j["Z"].get<double>();
     const Real S = j["S"].get<double>();
+    const Real Ncrit = j["ncrit"].get<double>();
     const int doCps = j["returnData"].get<int>();
 
     
@@ -476,7 +478,7 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;

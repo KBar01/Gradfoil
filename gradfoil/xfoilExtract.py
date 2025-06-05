@@ -61,7 +61,7 @@ def extract_ncrit_data(array):
     return np.array(firstSection),np.array(secondSection)
 
 
-def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath):
+def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath, ncrit):
     
     """Run XFOIL on a 200-point airfoil coordinate array and extract boundary layer data.
 
@@ -96,6 +96,10 @@ def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath):
     with open(xfoil_in, 'w') as f:
         f.write(f"LOAD {dat_file}\n")
         f.write("OPER\n")
+        f.write("VPAR\n")
+        f.write("N\n")
+        f.write(f"{ncrit}\n") 
+        f.write("\n")          # Return from VPAR menu
         f.write(f"VISC {Re:.0f}\n")
         f.write(f"MACH {mach:.4f}\n")
         f.write("ITER 100\n")
@@ -186,7 +190,7 @@ def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath):
 
     return out,turb,cl_value  # shape (4, N)
 
-def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf,trackCLs):
+def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf,trackCLs,ncrit):
     
 
     cwd = os.getcwd()
@@ -208,7 +212,8 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfo
         "S":             S,
         "Uinf":          Uinf,
         "custUinf":      custUinf,
-        "returnData":    returnFoilCps
+        "returnData":    returnFoilCps,
+        "ncrit":         ncrit
     }
 
     # Write JSON input
@@ -233,7 +238,7 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfo
     chord = np.max(xcoords) - np.min(xcoords)
     ReXfoil = Re/chord
 
-    xfoilStates,xfoilturb,xfoilCL = run_xfoil_get_BL_states(innerFoil,alphaDeg,ReXfoil,Ma,xfoilPath)
+    xfoilStates,xfoilturb,xfoilCL = run_xfoil_get_BL_states(innerFoil,alphaDeg,ReXfoil,Ma,xfoilPath,ncrit)
     xfoilCL /= chord
     # save them to json
     xfoil_json_path = os.path.join(cwd, "xfoilstates.json")
