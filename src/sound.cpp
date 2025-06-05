@@ -86,7 +86,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     delta = botStates[6];  
 
     if (tauMax > 0.0){ 
-    calc_Spp_Goody(theta,deltaS,delta,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S);
+    calc_Spp_Rozenburg(theta,deltaS,delta,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S);
     }
     
     Real SppTotal[Nsound];
