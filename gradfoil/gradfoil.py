@@ -57,17 +57,26 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
 
         # Starting back stepping to lower AoA, searching for converged solution 
         max_back_steps = 10
-        min_alpha = -1.0
         back_converged = False
-        tempalf = np.round(alphaDeg,decimals=1) - stepsize ; 
+
+        startPos = 1
+        if alphaDeg > 1.0 :
+            min_alpha = -1.5
+            tempalf = np.round(alphaDeg,decimals=1) - stepsize
+        else:
+            min_alpha = 5.0
+            tempalf = np.round(alphaDeg,decimals=1) + stepsize
+            startPos = 0
+        
+         
         smallStep = 0.5
         for i in range(max_back_steps):
             
-            if tempalf < 2 :
+            if (tempalf < 2) and (tempalf > -2):
                 tempalf = np.round(tempalf,decimals=1)
                 smallStep = 0.1
             
-            if tempalf < min_alpha:
+            if startPos==1 and tempalf < min_alpha:
                 print("Minimum AoA reached, cannot backstep further.")
                 break
 
@@ -87,8 +96,10 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
                 back_converged = True
                 break
             
-            
-            tempalf -= smallStep
+            if startPos==1:
+                tempalf -= smallStep
+            else:
+                tempalf += smallStep
 
         # At this point have stepped beckward to a converged solution for given aerofoil
         # now need to step forward to reach the initial target alpha
@@ -98,7 +109,11 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         
         
         stepsize = 0.5
-        fwdalf = tempalf + stepsize
+
+        if tempalf < alphaDeg:
+            fwdalf = tempalf + stepsize
+        else:
+            fwdalf = tempalf - stepsize
         attemptCount = 0
         
         overallCount = 0
@@ -126,14 +141,23 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
                     completed = True
                     break
                 else:
-                    fwdalf = min(fwdalf + stepsize, alphaDeg)
+                    if fwdalf <= alphaDeg:
+                        fwdalf = min(fwdalf + stepsize, alphaDeg)
+                    else:
+                        fwdalf= max(fwdalf - stepsize, alphaDeg)
+                    
+                    
                     attemptCount = 0  # reset on success
             else:
                 attemptCount += 1
                 if attemptCount > 6:
                     print("Forward stepping failed after multiple attempts")
                     break
-                fwdalf -= stepsize / (2 ** attemptCount)
+                
+                if fwdalf <= alphaDeg:
+                    fwdalf -= stepsize / (2 ** attemptCount)
+                else:
+                    fwdalf += stepsize / (2 ** attemptCount)
         
             if overallCount > 15:
                 break
