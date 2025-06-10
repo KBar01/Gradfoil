@@ -156,6 +156,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
     if not completed:
         for uf, tef in [(2.0, 0.07), (1.5, 1.0), (3.0, 0.06)]:
             
+            print('trying different panel distribution')
             with open(in_json_path, "r") as f:
                 data = json.load(f)
             data["Ufac"] = uf
