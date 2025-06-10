@@ -39,8 +39,8 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         "custUinf":      custUinf,
         "returnData":    returnFoilCps,
         "ncrit":         ncrit,
-        "Ufac":          2.5,
-        "TEfac":         0.06
+        "Ufac":          Ufac,
+        "TEfac":         TEfac
     }
 
     # Write JSON input
