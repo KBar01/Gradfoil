@@ -179,6 +179,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
                 print('trying different panel distribution')
                 success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef)
                 if success:
+                    print('success')
                     return success, uf,tef
         
         return success,Ufac,TEfac
