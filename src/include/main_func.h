@@ -19,7 +19,7 @@ struct Glob;
 
 int colMajorIndex(int row, int col, int num_rows);
 
-void make_panels(const Real (&inCoords)[2*Nin], Real (&outCoords)[2*Ncoords]);
+void make_panels(const Real (&inCoords)[2*Nin], Real (&outCoords)[2*Ncoords],const Real Ufac,const Real TEfac);
 
 void build_gamma_codi(Isol &isol, const Foil& foil, const Oper& oper);
 

@@ -19,7 +19,7 @@ using json = nlohmann::json;
 bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re, Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin],
  const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake],
  const Real sampleTE,const Real X,const Real Y,const Real Z,const Real S,
- Real Uinf,const int useCustUinf,const int doCps,const Real nCrit){
+ Real Uinf,const int useCustUinf,const int doCps,const Real nCrit,const Real Ufac, const Real TEfac){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -75,7 +75,7 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
         inCoords[colMajorIndex(1,i,2)] = inYcoords[i];
     }
     Real flattenedCoords[2 * Ncoords]={0};
-    make_panels(inCoords,flattenedCoords); // does spline to redist nodes over aerofoil for fixed number of 200 nodes
+    make_panels(inCoords,flattenedCoords,Ufac,TEfac); // does spline to redist nodes over aerofoil for fixed number of 200 nodes
 
 
     if (doGetPoints){
@@ -454,8 +454,9 @@ int main(){
     const Real S = j["S"].get<double>();
     const Real Ncrit = j["ncrit"].get<double>();
     const int doCps = j["returnData"].get<int>();
+    const Real Ufac = j["Ufac"].get<double>();
+    const Real TEfac = j["TEfac"].get<double>();
 
-    
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
 
@@ -478,7 +479,7 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;

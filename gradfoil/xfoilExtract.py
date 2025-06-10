@@ -213,7 +213,9 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfo
         "Uinf":          Uinf,
         "custUinf":      custUinf,
         "returnData":    returnFoilCps,
-        "ncrit":         ncrit
+        "ncrit":         ncrit,
+        "Ufac":          2.5,
+        "TEfac":         0.06
     }
 
     # Write JSON input

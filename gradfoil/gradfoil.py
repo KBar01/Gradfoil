@@ -38,7 +38,9 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         "Uinf":          Uinf,
         "custUinf":      custUinf,
         "returnData":    returnFoilCps,
-        "ncrit":         ncrit
+        "ncrit":         ncrit,
+        "Ufac":          2.5,
+        "TEfac":         0.06
     }
 
     # Write JSON input
@@ -49,130 +51,124 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
     initResult = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
     initConvergence = initResult.returncode
 
-    completed = 0
+    if initConvergence:
+        return True
 
+    print("Initial run failed. Starting backstepping ...")
+    
+    max_back_steps = 10
     stepsize = 1.0
-    if (not initConvergence):
-
-
-        # Starting back stepping to lower AoA, searching for converged solution 
-        max_back_steps = 10
-        back_converged = False
-
-        startPos = 1
-        if alphaDeg > 1.0 :
-            min_alpha = -1.5
-            tempalf = np.round(alphaDeg,decimals=1) - stepsize
-        else:
-            min_alpha = 5.0
-            tempalf = np.round(alphaDeg,decimals=1) + stepsize
-            startPos = 0
+    small_step = 0.5
+    back_converged = False
+    completed = False
+    
+    
+    # Determine stepping direction based on sign of alphaDeg
+    if alphaDeg >= 0:
+        step_direction = -1
+    else:
+        step_direction = 1
+    
+    # take a step of 0.5degrees, set limit of backstep to start + 5.0
+    tempalf = np.round(alphaDeg, decimals=1) + step_direction * stepsize
+    min_alpha = alphaDeg + step_direction * 5.0
+    
+    for i in range(max_back_steps):
         
-         
-        smallStep = 0.5
-        for i in range(max_back_steps):
-            
-            if (tempalf < 2) and (tempalf > -2):
-                tempalf = np.round(tempalf,decimals=1)
-                smallStep = 0.1
-            
-            if startPos==1 and tempalf < min_alpha:
-                print("Minimum AoA reached, cannot backstep further.")
+        if abs(tempalf) < 2.0:
+            small_step = 0.1
+
+        # Check if minimum/maximum alpha reached
+        if (step_direction < 0 and tempalf < min_alpha) or (step_direction > 0 and tempalf > min_alpha):
+            print("Minimum backstep AoA reached. Cannot continue.")
+            break
+
+        # Modify input JSON
+        with open(in_json_path, "r") as f:
+            data = json.load(f)
+
+        data["alpha_degrees"] = tempalf
+        data["restart"] = 0  # fresh run
+        with open(in_json_path, "w") as f:
+            json.dump(data, f)
+
+        # Attempt run
+        result = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
+        if result.returncode == 1:
+            print(f"Backstep converged at {tempalf}")
+            back_converged = True
+            break
+
+        tempalf += step_direction * small_step
+
+    if not back_converged:
+        print("Backstepping failed. No converged base solution.")
+        return False
+    
+    
+    # Step forward toward original alphaDeg using restart
+    print("Starting forward stepping...")
+    stepsize = 0.5
+    fwdalf = tempalf - step_direction * stepsize
+    attemptCount = 0
+    overallCount = 0
+    max_attempts = 10
+
+    while not completed and overallCount <= max_attempts:
+        
+        print(f"Trying forward step to: {fwdalf:.2f}")
+
+        with open(in_json_path, "r") as f:
+            data = json.load(f)
+
+        data["restart"] = 1
+        data["alpha_degrees"] = fwdalf
+        with open(in_json_path, "w") as f:
+            json.dump(data, f, indent=4)
+
+        result = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
+        converged = result.returncode == 1
+
+        if converged:
+            if abs(fwdalf - alphaDeg) < 1e-3:
+                completed = True
+                break
+            else:
+                fwdalf -= step_direction * stepsize
+                attemptCount = 0
+        else:
+            attemptCount += 1
+            if attemptCount > 6:
+                print("Forward stepping failed repeatedly.")
                 break
 
-            #print(f"Trying backstep to: {tempalf:.17f} degrees")
+            fwdalf += step_direction * (stepsize / (2 ** attemptCount))
+
+        overallCount += 1
+
+    # Optional fallback to XFOIL
+    if (not completed) and (xfoilPath is not None):
+        print("Falling back to XFOIL for initialization...")
+        completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf,trackCLs,ncrit)
+
+    # Optional: Try adaptive mesh parameter tuning here if needed
+    # Example placeholder:
+    if not completed:
+        for uf, tef in [(2.0, 0.07), (1.5, 1.0), (3.0, 0.06)]:
             
             with open(in_json_path, "r") as f:
                 data = json.load(f)
-            data["alpha_degrees"] = tempalf
-            data["restart"] = 0
-            with open(in_json_path, "w") as f:
-                json.dump(data, f)
-            
-            backstepResult = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
-            
-            if backstepResult.returncode == 1:
-                print(f"Backstep converged at {tempalf}")
-                back_converged = True
-                break
-            
-            if startPos==1:
-                tempalf -= smallStep
-            else:
-                tempalf += smallStep
-
-        # At this point have stepped beckward to a converged solution for given aerofoil
-        # now need to step forward to reach the initial target alpha
-
-        if not back_converged:
-            return False
-        
-        
-        stepsize = 0.5
-
-        if tempalf < alphaDeg:
-            fwdalf = tempalf + stepsize
-        else:
-            fwdalf = tempalf - stepsize
-        attemptCount = 0
-        
-        overallCount = 0
-        while not completed:
-            
-            # attempt fwd step using prev solution written to restart file
-            print(f"Trying forward step to: {fwdalf} degrees")
-
-
-            with open(in_json_path, "r") as f:
-                    data = json.load(f)
-
-            data["restart"] = 1 # using restart fle
-            data["alpha_degrees"] = fwdalf  # trying different alfa
+            data["Ufac"] = uf
+            data["TEfac"] = tef
             
             with open(in_json_path, "w") as f:
-                json.dump(data, f, indent=4)  # indent is optional, just for readability
-
-            result = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
-            fwdStepConverged = result.returncode
+                json.dump(data, f, indent=4)
             
-            
-            if fwdStepConverged:
-                if abs(fwdalf - alphaDeg) < 1e-3:
-                    completed = True
-                    break
-                else:
-                    if fwdalf <= alphaDeg:
-                        fwdalf = min(fwdalf + stepsize, alphaDeg)
-                    else:
-                        fwdalf= max(fwdalf - stepsize, alphaDeg)
-                    
-                    
-                    attemptCount = 0  # reset on success
-            else:
-                attemptCount += 1
-                if attemptCount > 6:
-                    print("Forward stepping failed after multiple attempts")
-                    break
-                
-                if fwdalf <= alphaDeg:
-                    fwdalf -= stepsize / (2 ** attemptCount)
-                else:
-                    fwdalf += stepsize / (2 ** attemptCount)
-        
-            if overallCount > 15:
+            rerun = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
+            if rerun.returncode == 1:
+                completed = True
                 break
-            overallCount +=1
-        
-        
-        if (not completed) and (xfoilPath != None):
 
-            # c++ code not converging, use xfoil to give an initial starting point
-            completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf,trackCLs,ncrit)
-        
-        return completed
-    
-
-    return (initConvergence or completed)
 
 
 def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0,Uinf=1,custUinf=0,trackCLs=0,returnFoilCps=0,ncrit=9.0):

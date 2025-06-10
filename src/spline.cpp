@@ -460,9 +460,9 @@ void spline_curvature(
     }
 }
 
-void make_panels(const Real (&inCoords)[2*Nin], Real (&outCoords)[2*Ncoords]){
+void make_panels(const Real (&inCoords)[2*Nin], Real (&outCoords)[2*Ncoords],const Real Ufac,const Real TEfac){
 
 
     Real outArcs[Ncoords];
-    spline_curvature(inCoords,2,0.1,outCoords,outArcs);
+    spline_curvature(inCoords,Ufac,TEfac,outCoords,outArcs);
 };
