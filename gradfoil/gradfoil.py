@@ -70,8 +70,8 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         step_direction = 1
     
     # take a step of 0.5degrees, set limit of backstep to start + 5.0
-    tempalf = np.round(alphaDeg, decimals=1) + step_direction * stepsize
-    min_alpha = alphaDeg + step_direction * 5.0
+    tempalf = np.round(alphaDeg, decimals=1) + (step_direction * stepsize)
+    min_alpha = alphaDeg + (step_direction * 5.0)
     
     for i in range(max_back_steps):
         
@@ -99,7 +99,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
             back_converged = True
             break
 
-        tempalf += step_direction * small_step
+        tempalf += (step_direction * small_step)
 
     if not back_converged:
         print("Backstepping failed. No converged base solution.")
@@ -109,12 +109,12 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
     # Step forward toward original alphaDeg using restart
     print("Starting forward stepping...")
     stepsize = 0.5
-    fwdalf = tempalf - step_direction * stepsize
+    fwdalf = tempalf - (step_direction * stepsize)
     attemptCount = 0
     overallCount = 0
     max_attempts = 10
 
-    while not completed and overallCount <= max_attempts:
+    while (not completed) and (overallCount <= max_attempts):
         
         print(f"Trying forward step to: {fwdalf:.2f}")
 
@@ -134,7 +134,15 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
                 completed = True
                 break
             else:
-                fwdalf -= step_direction * stepsize
+                
+                nextStep = fwdalf - (step_direction*stepsize)
+                diff = alphaDeg - fwdalf
+
+                if abs(diff) < abs(nextStep):
+                    fwdalf = alphaDeg
+                else:
+                    fwdalf = nextStep
+
                 attemptCount = 0
         else:
             attemptCount += 1
