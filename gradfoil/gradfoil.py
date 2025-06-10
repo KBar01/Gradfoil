@@ -159,8 +159,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         print("Falling back to XFOIL for initialization...")
         completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf,trackCLs,ncrit)
 
-    # Optional: Try adaptive mesh parameter tuning here if needed
-    # Example placeholder:
+    return completed
     
 
 
