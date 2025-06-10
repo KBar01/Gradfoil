@@ -16,7 +16,7 @@ def use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,cus
     completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf,trackCLs,ncrit)
     return completed
 
-def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit):
+def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac):
     
     
     cwd = os.getcwd()
@@ -161,33 +161,32 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
 
     # Optional: Try adaptive mesh parameter tuning here if needed
     # Example placeholder:
-    if not completed:
-        for uf, tef in [(2.0, 0.07), (1.5, 1.0), (3.0, 0.06)]:
-            
-            print('trying different panel distribution')
-            with open(in_json_path, "r") as f:
-                data = json.load(f)
-            data["Ufac"] = uf
-            data["TEfac"] = tef
-            
-            with open(in_json_path, "w") as f:
-                json.dump(data, f, indent=4)
-            
-            rerun = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
-            if rerun.returncode == 1:
-                completed = True
-                break
+    
 
 
 
-def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0,Uinf=1,custUinf=0,trackCLs=0,returnFoilCps=0,ncrit=9.0):
+def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0,Uinf=1,custUinf=0,trackCLs=0,returnFoilCps=0,ncrit=9.0,Ufac=2.5,TEfac=0.06):
     
     success = False
     if xfoilStart == 0:
-        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit)
+        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac)
+
+        if success:
+            return success, Ufac,TEfac
+    
+        if not success:
+            for uf, tef in [(Ufac-0.5, TEfac+0.01), (Ufac+0.5, TEfac-0.02), (Ufac+0.1, TEfac+0.05)]:
+                
+                print('trying different panel distribution')
+                success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef)
+                if success:
+                    return success, uf,tef
+        
+        return success,Ufac,TEfac
+
     else:
         success =    use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,ncrit)
-    return success
+        return success,0.0,0.0
 
 
 def grad_run(doSound=0):
