@@ -174,7 +174,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
             return success, Ufac,TEfac
     
         if not success:
-            for uf, tef in [(max(Ufac-0.4,0.4), min(TEfac+0.01,0.2)), (min(Ufac+0.6,3.0), max(TEfac-0.02,0.01)), (min(Ufac+0.1,3.0), min(TEfac+0.05,0.2))]:
+            for uf, tef in [(3.5, 0.05), (4.0,0.05), (3.0,0.1), (2.5,0.7), (1.0,0.1)]:
                 
                 print('trying different panel distribution')
                 success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef)
