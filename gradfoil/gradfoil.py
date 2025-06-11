@@ -56,7 +56,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
 
     print("Initial run failed. Starting backstepping ...")
     
-    max_back_steps = 10
+    max_back_steps = 8
     stepsize = 1.0
     small_step = 0.5
     back_converged = False
@@ -112,7 +112,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
     fwdalf = tempalf - (step_direction * stepsize)
     attemptCount = 0
     overallCount = 0
-    max_attempts = 10
+    max_attempts = 8
 
     while (not completed) and (overallCount <= max_attempts):
         
@@ -166,27 +166,27 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
 
 def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0,Uinf=1,custUinf=0,trackCLs=0,returnFoilCps=0,ncrit=9.0,Ufac=2.5,TEfac=0.06):
     
-    success = False
-    if xfoilStart == 0:
-        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac)
-
-        if success:
-            return success, Ufac,TEfac
     
-        if not success:
-            for uf, tef in [(3.5, 0.05), (4.0,0.05), (3.0,0.1), (2.5,0.7), (1.0,0.1)]:
-                
-                print('trying different panel distribution')
-                success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef)
-                if success:
-                    print('success')
-                    return success, uf,tef
-        
-        return success,Ufac,TEfac
+    
+    success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac)
 
+    if success:
+        return success
     else:
-        success =    use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,ncrit)
-        return success,0.0,0.0
+        count = 1 
+        for uf, tef in [(3.5, 0.05), (4.0,0.05), (3.0,0.1), (2.5,0.7), (1.0,0.1), (1.0,0.05)]:
+            
+            print('trying different panel distribution ('+str(count)+'/6)')
+            success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef)
+            if success:
+                break
+            count +=1
+    
+        return success
+
+    #else:
+    #    success =    use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,ncrit)
+    #    return success,0.0,0.0
 
 
 def grad_run(doSound=0):
