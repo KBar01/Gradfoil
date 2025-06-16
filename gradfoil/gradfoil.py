@@ -2,8 +2,8 @@ import json
 import subprocess
 import numpy as np
 import os
-import tempfile
-from importlib.resources import files
+#import tempfile
+#from importlib.resources import files
 from .xfoilExtract import xfoil_start_run
 
 # Dynamically locate the installed executable path (in gradfoil/bin/)
