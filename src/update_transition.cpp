@@ -8,7 +8,7 @@
 #include "get_funcs.h"
 #include "vector_ops.hpp"
 
-int march_amplification(Glob &glob, Vsol &vsol, Isol &isol, int si, const Param&param) {
+int march_amplification(Glob &glob, Vsol &vsol, Isol &isol, int si, const Param&param, const int topTransNode, const int botTransNode,const bool force) {
     
     
     const std::vector<int> &Is = vsol.Is[si];
@@ -59,7 +59,8 @@ int march_amplification(Glob &glob, Vsol &vsol, Isol &isol, int si, const Param&
             U2[2] += omega*dU;
         }
         
-        if (U2[2] > param.ncrit) {
+        // OR if node is a forced transition node break also
+        if ((U2[2] > param.ncrit) || (force && (i2==topTransNode || i2==botTransNode))) {
             break;
         } 
         else {
@@ -72,7 +73,7 @@ int march_amplification(Glob &glob, Vsol &vsol, Isol &isol, int si, const Param&
 }
 
 
-void update_transition(Glob &glob, Vsol &vsol, Isol &isol, const Param&param) {
+void update_transition(Glob &glob, Vsol &vsol, Isol &isol, const Param&param, const int topTransNode, const int botTransNode,const bool force) {
     
     
     for (int si = 0; si < 2; ++si) {
@@ -97,7 +98,7 @@ void update_transition(Glob &glob, Vsol &vsol, Isol &isol, const Param&param) {
         }
     
         // get new transition location
-        int ilam = march_amplification(glob, vsol, isol, si, param);
+        int ilam = march_amplification(glob, vsol, isol, si, param,topTransNode,botTransNode,force);
 
         if (ilam == ilam0) {
             

@@ -16,10 +16,31 @@
 
 using json = nlohmann::json;
 
-bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re, Real Ma,const Real (&inXcoords)[Nin], Real (&inYcoords)[Nin],
- const Real (&statesInit)[RVdimension],const bool (&turbInit)[Ncoords+Nwake],
- const Real sampleTE,const Real X,const Real Y,const Real Z,const Real S,
- Real Uinf,const int useCustUinf,const int doCps,const Real nCrit,const Real Ufac, const Real TEfac){
+bool runCode(
+    bool restart,
+    bool xfoilStart,
+    bool doGetPoints,
+    Real alphad,
+    Real Re, 
+    Real Ma,
+    const Real (&inXcoords)[Nin], 
+    Real (&inYcoords)[Nin],
+    const Real (&statesInit)[RVdimension],
+    const bool (&turbInit)[Ncoords+Nwake],
+    const Real sampleTE,
+    const Real X,
+    const Real Y,
+    const Real Z,
+    const Real S,
+    Real Uinf,
+    const int useCustUinf,
+    const int doCps,
+    const Real nCrit,
+    const Real Ufac, 
+    const Real TEfac,
+    const int topTransPos,
+    const int botTransPos,
+    const bool force){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -68,6 +89,8 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     }
     Geom geom;
     geom.chord = chordScale;
+
+
     
     Real inCoords[2*Nin]={0};
     for (int i=0;i<Nin;++i){
@@ -77,6 +100,43 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     Real flattenedCoords[2 * Ncoords]={0};
     make_panels(inCoords,flattenedCoords,Ufac,TEfac); // does spline to redist nodes over aerofoil for fixed number of 200 nodes
 
+
+    // finding node positions to force transition ------------------------
+    Real xTransTop = topTransPos * geom.chord ;
+    Real xTransBot = botTransPos * geom.chord ;
+    
+    int idx_closest_bot = 0;
+    int idx_closest_top = Ncoords - 1;  // top TE node
+    
+    if (force) {
+        
+
+        Real min_dist_bot = std::abs(flattenedCoords[colMajorIndex(0, 0, 2)] - xTransBot);
+        Real min_dist_top = std::abs(flattenedCoords[colMajorIndex(0, Ncoords - 1, 2)] - xTransTop);
+
+        // Bottom surface: from bottom TE forward
+        for (int i = 1; i < Ncoords / 2; ++i) {
+            Real x = flattenedCoords[colMajorIndex(0, i, 2)];
+            Real dist = std::abs(x - xTransBot);
+            if (dist < min_dist_bot) {
+                min_dist_bot = dist;
+                idx_closest_bot = i;
+            }
+        }
+
+        // Top surface: from top TE backward
+        for (int i = Ncoords - 2; i >= Ncoords / 2; --i) {
+            Real x = flattenedCoords[colMajorIndex(0, i, 2)];
+            Real dist = std::abs(x - xTransTop);
+            if (dist < min_dist_top) {
+                min_dist_top = dist;
+                idx_closest_top = i;
+            }
+        }
+    }
+
+
+    // -------------------------------------------------------------------------
 
     if (doGetPoints){
         
@@ -143,13 +203,13 @@ bool runCode(bool restart,bool xfoilStart,bool doGetPoints,Real alphad, Real Re,
     }
     
     else {
-        init_boundary_layer(oper,foil,param,isol,vsol,glob);
+        init_boundary_layer(oper,foil,param,isol,vsol,glob,idx_closest_bot,idx_closest_top,force);
     }
     #endif
  
     stagpoint_move(isol,glob,foil,wake,vsol);
 
-    bool converged = solve_coupled(oper,foil,wake,param,vsol,isol,glob);
+    bool converged = solve_coupled(oper,foil,wake,param,vsol,isol,glob,idx_closest_top,idx_closest_bot,force);
 
     Post post;
     calc_force(oper,geom,param,isol,foil,glob,post);
@@ -457,6 +517,12 @@ int main(){
     const Real Ufac = j["Ufac"].get<double>();
     const Real TEfac = j["TEfac"].get<double>();
 
+    // forcing transition
+    const bool force = j["forcetrans"].get<int>();
+    const Real topTransPos = j["toptrans"].get<double>();
+    const Real botTransPos = j["bottrans"].get<double>();
+
+
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
 
@@ -479,7 +545,7 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;

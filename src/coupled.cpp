@@ -26,7 +26,7 @@ Real euc_norm(const Real* R, int size) {
 
 #ifdef USE_CODIPACK
 bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
-    const Param& param, Vsol& vsol, Isol& isol, Glob& glob) {
+    const Param& param, Vsol& vsol, Isol& isol, Glob& glob, const int topTransNode, const int botTransNode, const bool force) {
 
     int nNewton = param.niglob;
     bool converged = false;
@@ -64,7 +64,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
 #else
 bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
-    const Param& param, Vsol& vsol, Isol& isol, Glob& glob) {
+    const Param& param, Vsol& vsol, Isol& isol, Glob& glob, const int topTransNode, const int botTransNode, const bool force) {
 
     int nNewton = param.niglob;
     bool converged = false;
@@ -96,7 +96,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
         stagpoint_move(isol, glob, foil, wake, vsol);
         
-        update_transition(glob, vsol, isol, param);
+        update_transition(glob, vsol, isol, param, topTransNode, botTransNode, force);
 
     }
 

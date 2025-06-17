@@ -177,7 +177,7 @@ void wake_init(const Vsol& vsol, const Foil& foil, const Glob& glob, const Param
 
 
 
-void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob) {
+void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob, const int botTransNode,const int topTransNode, const bool force) {
     
     constexpr int Nsys = Ncoords + Nwake;
     const Real Hmaxl = 3.8;
@@ -185,8 +185,6 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Is
 
     Real ue[Nsys]={0};
     get_ueinv(isol,ue);  // get inviscid edge velocity
-
-    // TODO: add section for restarting with BL but setting ueinv correctly
 
     for (int surf = 0; surf < 3; ++surf) {
 
@@ -420,7 +418,11 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Is
             }
 
             // Have converged BL state for given node, now need to check for transition based on amplification value
-            if (!turb && (!tran && currState[2]>param.ncrit)){
+            
+            // HERE!!! add an additional statement inside the if, saying if not tran & ncrit exceeded OR forced trans node
+            // set tran = true 
+            
+            if (!turb && ((!tran && currState[2]>param.ncrit) || (force &&(currNode==topTransNode || currNode==botTransNode)))){
                 tran = true;
                 continue ; // amplification exceeds ncrit, redo node position with trans= true
             }
@@ -637,7 +639,7 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
         }
 
         // Have converged BL state for given node, now need to check for transition based on amplification value
-        if (!turb && (!tran && currState[2]>param.ncrit)){
+        if (!turb && ((!tran && currState[2]>param.ncrit) || (currNode == botTransNode || currNode == topTransNode))){
             tran = true;
             continue ; // amplification exceeds ncrit, redo node position with trans= true
         }

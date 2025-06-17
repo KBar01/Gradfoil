@@ -37,7 +37,7 @@ void calc_ue_m(const Foil&foil,const Wake&wake,Isol&isol,Vsol &vsol);
 
 void rebuild_ue_m(const Foil&foil,const Wake&wake,const Isol&isol,Vsol&vsol,bool realloc);
 
-void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob);
+void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob, const int botTransNode,const int topTransNode, const bool force);
 
 void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob);
 
@@ -49,11 +49,12 @@ void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const 
 
 void update_state(const Oper&oper, const Param&param, Glob&glob,Vsol&vsol);
 
-void update_transition(Glob &glob, Vsol &vsol, Isol &isol, const Param&param);
+void update_transition(Glob &glob, Vsol &vsol, Isol &isol, const Param&param, const int topTransNode, const int botTransNode,const bool force);
 
 void clear_RV(Glob&glob, const Isol&isol,const Vsol&vsol, const Foil&foil,const Param&param);
 
-bool solve_coupled(const Oper&oper,const Foil&foil,const Wake&wake,const Param&param,Vsol&vsol,Isol&isol,Glob&glob);
+bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
+    const Param& param, Vsol& vsol, Isol& isol, Glob& glob, const int topTransNode, const int botTransNode, const bool force);
 
 void calc_force(const Oper&op, const Geom&geom, const Param&par, const Isol&isol,const Foil&foil, const Glob&glob, Post& post);
 
