@@ -255,7 +255,7 @@ bool runCode(
     Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S);
     #endif
     #else
-    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S);
+    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps);
     #endif
 
     auto end = std::chrono::high_resolution_clock::now();
@@ -362,6 +362,7 @@ bool runCode(
         std::ofstream outFile("out.json");
         outFile << out.dump(4);  // pretty print with 4 spaces indentation
         outFile.close();
+
     }
 
     # endif

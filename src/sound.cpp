@@ -11,14 +11,14 @@
 using json = nlohmann::json;
 
 
-void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,const Real tau,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S){
+void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,const Real tau,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
 
     // start exp : 2 (100Hz)
     // final exp : 4.30103 (20,000 Hz)
 
 
     // loop over this with different omega vals
-    Real phiqq[Nsound] ;
+    
     
     for (int i=0;i<Nsound;++i){
         phiqq[i] = calc_S_qq_Amiet_rozenberg(edgeVel,omega[i],oper.rho,tau,delta,deltaStar,theta,dpdx);
@@ -48,7 +48,7 @@ void calc_Spp_Goody(const Real theta,const Real deltaStar,const Real delta,const
 }
 
 
-Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S){
+Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S,const int doCps){
 
     const Real startExp = 2.0; // start exp : 2 (100Hz)
     const Real endExp = 4.30103; // final exp : 4.30103 (20,000 Hz)
@@ -63,7 +63,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     }
 
     Real SppUpper[Nsound]={0}, SppLower[Nsound]={0};
-    
+    Real phiqqUpper[Nsound]={0},phiqqLower[Nsound]={0};
     
     Real theta = topStates[0];
     Real deltaS = topStates[1];
@@ -74,7 +74,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     Real delta = topStates[6];    
     
     if (tauMax > 0.0){ 
-    calc_Spp_Rozenburg(theta,deltaS,delta,tauMax,edgeVel,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S);
+    calc_Spp_Rozenburg(theta,deltaS,delta,tauMax,edgeVel,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
     }
 
     theta = botStates[0];
@@ -86,7 +86,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     delta = botStates[6];  
 
     if (tauMax > 0.0){ 
-    calc_Spp_Rozenburg(theta,deltaS,delta,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S);
+    calc_Spp_Rozenburg(theta,deltaS,delta,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
     }
     
     Real SppTotal[Nsound];
@@ -106,6 +106,20 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     // Convert to OASPL (in dB)
     Real pref2 = (20e-6)*(20e-6);
     Real OASPL = 10.0 * std::log10(integral / pref2);
+    #ifndef USE_CODIPACK
+    if (doCps){
+        
+        json amiet;
+        amiet["omega"] = omega;
+        amiet["phiqqupper"] = phiqqUpper;
+        amiet["phiqqlower"] = phiqqLower;
+        amiet["sppupper"]   = SppUpper;
+        amiet["spplower"]   = SppLower;
+        std::ofstream amietFile("amiet.json");
+        amietFile << amiet.dump(4);  // pretty print with 4 spaces indentation
+        amietFile.close();
+    }
 
+    #endif
     return OASPL;
 }
