@@ -422,7 +422,7 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Is
             // HERE!!! add an additional statement inside the if, saying if not tran & ncrit exceeded OR forced trans node
             // set tran = true 
             
-            if (!turb && ((!tran && currState[2]>param.ncrit) || (force &&(currNode==topTransNode || currNode==botTransNode)))){
+            if (!turb && ((!tran && currState[2]>param.ncrit) || ((!turb && !tran && force) && (currNode==topTransNode || currNode==botTransNode)))){
                 tran = true;
                 continue ; // amplification exceeds ncrit, redo node position with trans= true
             }
@@ -639,7 +639,7 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
         }
 
         // Have converged BL state for given node, now need to check for transition based on amplification value
-        if (!turb && ((!tran && currState[2]>param.ncrit) || (currNode == botTransNode || currNode == topTransNode))){
+        if (!turb && (!tran && currState[2]>param.ncrit)){
             tran = true;
             continue ; // amplification exceeds ncrit, redo node position with trans= true
         }

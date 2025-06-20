@@ -74,7 +74,7 @@ int find_interp_position(const Real* xcoords, int start, int end, Real x_target)
     return found_idx;
 }
 
-void get_nodes(int topFoundIdx,int botFoundIdx, Real x_target, int* topNodeList,int topNnodes, int* botNodeList,int botNnodes, const Vsol&vsol){
+void get_nodes(int topFoundIdx,int botFoundIdx, Real x_target, int* topNodeList,int &topNnodes, int* botNodeList,int &botNnodes, const Vsol&vsol){
 
     // do top surface :
     int topStart = topFoundIdx - 1 ; // Ideal starting position for cubic interp to have 2 nodes either side of sampling position

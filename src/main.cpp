@@ -38,8 +38,8 @@ bool runCode(
     const Real nCrit,
     const Real Ufac, 
     const Real TEfac,
-    const int topTransPos,
-    const int botTransPos,
+    const Real &topTransPos,
+    const Real &botTransPos,
     const bool force){
 
     auto start = std::chrono::high_resolution_clock::now();
