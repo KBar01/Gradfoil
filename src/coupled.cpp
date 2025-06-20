@@ -56,7 +56,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
         stagpoint_move(isol, glob, foil, wake, vsol);
      
-        update_transition(glob, vsol, isol, param);
+        update_transition(glob, vsol, isol, param, topTransNode, botTransNode, force);
     }
 
     return converged;
