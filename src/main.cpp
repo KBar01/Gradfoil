@@ -252,7 +252,7 @@ bool runCode(
     // if codipack, only use sound code if sound flag on. if not codipack run sound regardless
     #ifdef USE_CODIPACK
     #if DO_SOUND
-    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S);
+    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps);
     #endif
     #else
     Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps);
