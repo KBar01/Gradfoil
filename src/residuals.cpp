@@ -887,9 +887,10 @@ void residual_transition(
     // sensitivity of xt w.r.t. U,x from Rxt(xt,U,x) = 0 constraint
     Real xt_U[8]={0}, xt_U1[4]={0}, xt_U2[4]={0};
     //Real xt_x1 = -Rxt_x1 / Rxt_xt;      // zero when fixed
-    Real xt_x1 = force ? 0.0 : -Rxt_x1 / Rxt_xt;
+    Real zero = 0.0 ;
+    Real xt_x1 = force ? zero : -Rxt_x1 / Rxt_xt;
     //Real xt_x2 = -Rxt_x2 / Rxt_xt;      // zero when fixed
-    Real xt_x2 = force ? 0.0 : -Rxt_x2 / Rxt_xt;
+    Real xt_x2 = force ? zero : -Rxt_x2 / Rxt_xt;
     
     if (!force){
         for (int i = 0; i < 8; ++i){xt_U[i] = -Rxt_U[i] / Rxt_xt;}
