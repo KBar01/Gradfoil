@@ -209,6 +209,16 @@ struct Param {
     Real rho0 = 1.0, H0 = 0.0, Tsrat = 0.35, gam = 1.4;
     Real KTb = 1.0, KTl = 0.0, cps = 0.0;
 
+
+
+};
+
+
+struct Trans {
+    
+    int isForced[2] = {0,0}; // tracking if transition is forced or natural
+    int transNode[2] = {1,198}; // start node of trans of bottom/top surface
+    Real transPos[2] = {0.5,0.5}; // x position of trans of bottom/top surface
 };
 
 #endif // AIRFOIL_STRUCTS_H

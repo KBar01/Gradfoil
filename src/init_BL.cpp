@@ -177,7 +177,7 @@ void wake_init(const Vsol& vsol, const Foil& foil, const Glob& glob, const Param
 
 
 
-void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob, const int botTransNode,const int topTransNode, const bool force) {
+void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob, Trans&tdata, const bool force) {
     
     constexpr int Nsys = Ncoords + Nwake;
     const Real Hmaxl = 3.8;
@@ -310,7 +310,6 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Is
             bool direct = true;
             constexpr int nNewton = 30;
             const int iNswitch = 12;
-            
             Real Hktgt={0} ;
             // Main newton loop for convergence of BL properties
             for (int iNewton = 0; iNewton < nNewton; ++iNewton) {
@@ -318,7 +317,15 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Is
                 
                 if (tran) {
                     
-                    residual_transition(prevState,currState,isol.distFromStag[prevNode],isol.distFromStag[currNode],0,0,param,R,R_U,R_x);
+                    // do linear interp to find y value
+                    Real x1 = foil.x[colMajorIndex(0,prevNode,2)],y1 = foil.x[colMajorIndex(1,prevNode,2)];
+                    Real x2 = foil.x[colMajorIndex(0,currNode,2)],y2 = foil.x[colMajorIndex(1,currNode,2)];
+
+                    Real yt = y1 + ((tdata.transPos[surf] - x1) / (x2 - x1)) * (y2 - y1);
+                    
+                    Real distFromStagTrans =  isol.distFromStag[prevNode] + std::sqrt((tdata.transPos[surf]-x1)*(tdata.transPos[surf]-x1)  + (yt-y1)*(yt-y1));
+
+                    residual_transition(prevState,currState,isol.distFromStag[prevNode],isol.distFromStag[currNode],0,0,param,tdata.isForced[surf],distFromStagTrans,R,R_U,R_x);
                 } 
                 else {
     
@@ -364,9 +371,25 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Is
                 if (turb)   { dm = std::max(dm,std::abs(dU[2]/prevState[2]));}
                 else if (direct){ dm = std::max(dm,std::abs(dU[2]/10));}
                 
+
+                
                 Real omega = 1;
                 if (dm>0.3){omega = 0.3/dm;}
+
+                if (tran){
+
+                    // Tentative update
+                    Real Ui_test2 = currState[2] + omega * dU[2];
+
+                    // If U[2] would become too small or negative, scale omega
+                    if (Ui_test2 < 0.001) {
+                        omega = (0.001 - currState[2]) / dU[2];
+                        omega = std::max(omega, 1e-4); // prevent divide-by-zero or too small
+                    }
+                }
+
                 for (int r=0;r<4;++r){dU[r] *= omega;}
+
 
                 // intermediate updated state
                 Real Ui[4] = {
@@ -396,7 +419,7 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Is
                     if (wake){
                         
                         Real H2=Hk;
-                        for (int k=0; k<6;++k){ H2 -= (H2+.03*Hkr*std::pow(H2-1,3-Hk))/(1+.09*Hkr*(H2-1)*(H2-1));}
+                        for (int k=0; k<6;++k){ H2 -= (H2+.03*Hkr*std::pow(H2-1,3)-Hk)/(1+.09*Hkr*(H2-1)*(H2-1));}
                         Hktgt = std::max(H2,1.01);
                     }
                     else if (turb) {Hktgt = Hk - 0.15*Hkr;}
@@ -422,9 +445,17 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Is
             // HERE!!! add an additional statement inside the if, saying if not tran & ncrit exceeded OR forced trans node
             // set tran = true 
             
-            if (!turb && ((!tran && currState[2]>param.ncrit) || ((!turb && !tran && force) && (currNode==topTransNode || currNode==botTransNode)))){
+            if (!turb && ((!tran && currState[2]>param.ncrit))){
                 tran = true;
+                tdata.isForced[surf] = 0; // in this case transition is natural so dont need to force 
+                
                 continue ; // amplification exceeds ncrit, redo node position with trans= true
+            }
+
+            if ((!turb && !tran && force) && (prevNode==tdata.transNode[surf])){
+                tran = true;
+                tdata.isForced[surf] = 1;  // using the forced approach, changes the residual calc buy fixing x trans
+                continue ;
             }
 
             if (tran){turb = true; tran=false;} // after tranistion, all nodes are turbulent
@@ -438,6 +469,8 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Is
     }
 }
 
+
+/*
 void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob) {
     
     constexpr int Nsys = Ncoords + Nwake;
@@ -654,3 +687,5 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
     }
 
 }
+
+*/

@@ -45,6 +45,8 @@ void residual_transition(
     const Real aux1,
     const Real aux2,
     const Param& param,
+    const int force,
+    const Real transPos,
     Real (&R)[3],
     Real (&R_U)[24],
     Real (&R_x)[6]

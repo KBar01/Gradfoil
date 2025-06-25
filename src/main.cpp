@@ -71,7 +71,7 @@ bool runCode(
     const Real rhoInf = 1.225;
     const Real dynViscInf = 1.789e-5 ;
     
-    Real minX = 0.5, maxX = 0.5;
+    Real minX = 0.5, maxX = 0.01;
     for (int i=0;i<Nin;++i){
         Real newMin = std::min(minX,inXcoords[i]);
         Real newMax = std::max(maxX,inXcoords[i]);
@@ -90,17 +90,15 @@ bool runCode(
     Geom geom;
     geom.chord = chordScale;
 
-
+    Real flattenedCoords[2 * Ncoords]={0};
     
     Real inCoords[2*Nin]={0};
     for (int i=0;i<Nin;++i){
         inCoords[colMajorIndex(0,i,2)] = inXcoords[i];
         inCoords[colMajorIndex(1,i,2)] = inYcoords[i];
     }
-    Real flattenedCoords[2 * Ncoords]={0};
     make_panels(inCoords,flattenedCoords,Ufac,TEfac); // does spline to redist nodes over aerofoil for fixed number of 200 nodes
-
-
+    
     // finding node positions to force transition ------------------------
     Real xTransTop = topTransPos * geom.chord ;
     Real xTransBot = botTransPos * geom.chord ;
@@ -110,35 +108,37 @@ bool runCode(
     
     if (force) {
         
-
-        Real min_dist_bot = std::abs(flattenedCoords[colMajorIndex(0, 0, 2)] - xTransBot);
-        Real min_dist_top = std::abs(flattenedCoords[colMajorIndex(0, Ncoords - 1, 2)] - xTransTop);
-
         // Bottom surface: from bottom TE forward
-        for (int i = 1; i < Ncoords / 2; ++i) {
+        for (int i = 1; i < Ncoords; ++i) {
             Real x = flattenedCoords[colMajorIndex(0, i, 2)];
-            Real dist = std::abs(x - xTransBot);
-            if (dist < min_dist_bot) {
-                min_dist_bot = dist;
+            Real dist = x - xTransBot;
+            if (dist < 0.0) {
                 idx_closest_bot = i;
+                break;
             }
         }
 
         // Top surface: from top TE backward
-        for (int i = Ncoords - 2; i >= Ncoords / 2; --i) {
+        for (int i = Ncoords - 2; i >= 0; --i) {
             Real x = flattenedCoords[colMajorIndex(0, i, 2)];
-            Real dist = std::abs(x - xTransTop);
-            if (dist < min_dist_top) {
-                min_dist_top = dist;
+            Real dist = x - xTransTop;
+            if (dist < 0.0) {
                 idx_closest_top = i;
+                break;
             }
         }
     }
 
+    Trans tdata;
+
+    tdata.transNode[0] = idx_closest_bot;
+    tdata.transNode[1] = idx_closest_top;
+    tdata.transPos[0] = xTransBot ;
+    tdata.transPos[1] = xTransTop ;
 
     // -------------------------------------------------------------------------
 
-    if (doGetPoints){
+    //if (doGetPoints){
         
         #ifndef USE_CODIPACK
         json points;
@@ -147,10 +147,10 @@ bool runCode(
         pointsFile << points.dump(4);  // pretty print with 4 spaces indentation
         pointsFile.close();
         #endif
-        return true;
-    }
-    else
-    {
+        //return true;
+    //}
+    //else
+    //{
     Foil foil(flattenedCoords);
     Isol isol;
     Param param;
@@ -196,20 +196,23 @@ bool runCode(
 
         for (int i=0;i<RVdimension;++i){glob.U[i] = j["states"][i];}
         for (int i=0;i<(Ncoords+Nwake);++i){vsol.turb[i] = j["turb"][i];}
+
+        tdata.isForced[0]  = 1;
+        tdata.isForced[1]  = 1;
     }
     
-    else if (xfoilStart){
-        init_boundary_layer_from_xfoil(oper,foil,param,isol,vsol,glob);
-    }
+    //else if (xfoilStart){
+        //init_boundary_layer_from_xfoil(oper,foil,param,isol,vsol,glob);
+    //}
     
     else {
-        init_boundary_layer(oper,foil,param,isol,vsol,glob,idx_closest_bot,idx_closest_top,force);
+        init_boundary_layer(oper,foil,param,isol,vsol,glob,tdata,force);
     }
     #endif
- 
+
     stagpoint_move(isol,glob,foil,wake,vsol);
 
-    bool converged = solve_coupled(oper,foil,wake,param,vsol,isol,glob,idx_closest_top,idx_closest_bot,force);
+    bool converged = solve_coupled(oper,foil,wake,param,vsol,isol,glob,tdata,force);
 
     Post post;
     calc_force(oper,geom,param,isol,foil,glob,post);
@@ -473,7 +476,7 @@ bool runCode(
     #endif
 
     return converged;
-    }
+    //}
 };
 
 
@@ -522,7 +525,6 @@ int main(){
     const bool force = j["forcetrans"].get<int>();
     const Real topTransPos = j["toptrans"].get<double>();
     const Real botTransPos = j["bottrans"].get<double>();
-
 
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;

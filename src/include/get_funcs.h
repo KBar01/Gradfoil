@@ -35,6 +35,8 @@ Real get_cteq(const Real th,const Real ds,const Real sa,const Real ue,const bool
 
 Real get_damp(const Real th,const Real ds,const Real sa,const Real ue, const Param& param, Real (&damp_U)[4]);
 
+Real get_damp_forced(const Real th,const Real ds,const Real sa,const Real ue, const Param& param, const Real&ncrit, Real (&damp_U)[4]);
+
 Real get_cttr(const Real th,const Real ds,const Real sa,const Real ue,const bool turb,const Param&param,Real (&cttr_U)[4]);
 
 Real get_Hs(

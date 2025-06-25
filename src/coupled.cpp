@@ -26,7 +26,7 @@ Real euc_norm(const Real* R, int size) {
 
 #ifdef USE_CODIPACK
 bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
-    const Param& param, Vsol& vsol, Isol& isol, Glob& glob, const int topTransNode, const int botTransNode, const bool force) {
+    const Param& param, Vsol& vsol, Isol& isol, Glob& glob, Trans&tdata, const bool force) {
 
     int nNewton = param.niglob;
     bool converged = false;
@@ -35,7 +35,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
     for (int i = 0; i < 1; ++i) {
         
-        build_glob_RV(foil, vsol, isol, glob, param);
+        build_glob_RV(foil, vsol, isol, glob, param,tdata);
 
         Real residualNorm = euc_norm(glob.R, Rsize);
         
@@ -56,7 +56,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
         stagpoint_move(isol, glob, foil, wake, vsol);
      
-        update_transition(glob, vsol, isol, param, topTransNode, botTransNode, force);
+        update_transition(glob, vsol, isol, param, tdata, force);
     }
 
     return converged;
@@ -64,7 +64,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
 #else
 bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
-    const Param& param, Vsol& vsol, Isol& isol, Glob& glob, const int topTransNode, const int botTransNode, const bool force) {
+    const Param& param, Vsol& vsol, Isol& isol, Glob& glob, Trans&tdata, const bool force) {
 
     int nNewton = param.niglob;
     bool converged = false;
@@ -74,7 +74,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
     for (int i = 0; i < 50; ++i) {
         
         
-        build_glob_RV(foil, vsol, isol, glob, param);
+        build_glob_RV(foil, vsol, isol, glob, param,tdata);
         
         Real residualNorm = euc_norm(glob.R, Rsize);
         
@@ -96,7 +96,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
         stagpoint_move(isol, glob, foil, wake, vsol);
         
-        update_transition(glob, vsol, isol, param, topTransNode, botTransNode, force);
+        update_transition(glob, vsol, isol, param, tdata, force);
 
     }
 
