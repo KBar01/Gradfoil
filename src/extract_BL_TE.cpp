@@ -146,7 +146,7 @@ void interp_BL_states(const int* topIdx,const int* botIdx, const int topNnodes, 
             states[colMajorIndex(q,botIdx[2],4)],
             states[colMajorIndex(q,botIdx[3],4)]
         };
-        botInterpStates[q] = adaptive_interp(x_target,bxs,bys,topNnodes);
+        botInterpStates[q] = adaptive_interp(x_target,bxs,bys,botNnodes);
     }
 }
 
