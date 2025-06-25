@@ -196,9 +196,11 @@ bool runCode(
 
         for (int i=0;i<RVdimension;++i){glob.U[i] = j["states"][i];}
         for (int i=0;i<(Ncoords+Nwake);++i){vsol.turb[i] = j["turb"][i];}
-
-        tdata.isForced[0]  = 1;
-        tdata.isForced[1]  = 1;
+        
+        if (force){
+            tdata.isForced[0]  = 1;
+            tdata.isForced[1]  = 1;
+        }
     }
     
     //else if (xfoilStart){
