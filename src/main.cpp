@@ -141,7 +141,7 @@ bool runCode(
 
     // -------------------------------------------------------------------------
 
-    //if (doGetPoints){
+    if (doGetPoints){
         
         #ifndef USE_CODIPACK
         json points;
@@ -150,10 +150,10 @@ bool runCode(
         pointsFile << points.dump(4);  // pretty print with 4 spaces indentation
         pointsFile.close();
         #endif
-        //return true;
-    //}
-    //else
-    //{
+        return true;
+    }
+    else
+    {
     Foil foil(flattenedCoords);
     Isol isol;
     Param param;
@@ -207,9 +207,9 @@ bool runCode(
         }
     }
     
-    //else if (xfoilStart){
-        //init_boundary_layer_from_xfoil(oper,foil,param,isol,vsol,glob);
-    //}
+    else if (xfoilStart){
+        init_boundary_layer_from_xfoil(oper,foil,param,isol,vsol,glob);
+    }
     
     else {
         init_boundary_layer(oper,foil,param,isol,vsol,glob,tdata,force,topNcrit,botNcrit);
@@ -485,7 +485,7 @@ bool runCode(
     #endif
 
     return converged;
-    //}
+    }
 };
 
 
@@ -567,4 +567,5 @@ int main(){
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;
+    
 };

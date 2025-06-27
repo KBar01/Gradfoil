@@ -190,7 +190,7 @@ def run_xfoil_get_BL_states(coords, alpha, Re, mach, xfoiPath, ncrit):
 
     return out,turb,cl_value  # shape (4, N)
 
-def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf,trackCLs,ncrit):
+def xfoil_start_run(EXEC_FWD,xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,custNcrits,topncrit,botncrit,breakloopInt):
     
 
     cwd = os.getcwd()
@@ -214,8 +214,15 @@ def xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfo
         "custUinf":      custUinf,
         "returnData":    returnFoilCps,
         "ncrit":         ncrit,
-        "Ufac":          2.5,
-        "TEfac":         0.06
+        "Ufac":          Ufac,
+        "TEfac":         TEfac,
+        "toptrans":      toptrans,
+        "bottrans":      bottrans,
+        "forcetrans":    force,
+        "custncrits":    custNcrits,
+        "topncrit":      topncrit,
+        "botncrit":      botncrit,
+        "breakloop":     breakloopInt
     }
 
     # Write JSON input

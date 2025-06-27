@@ -40,7 +40,7 @@ void rebuild_ue_m(const Foil&foil,const Wake&wake,const Isol&isol,Vsol&vsol,bool
 
 void init_boundary_layer(const Oper&oper, const Foil&foil, Param&param, Isol&isol, Vsol&vsol, Glob&glob, Trans&tdata, const bool force, const Real topNcrit, const Real botNcrit);
 
-//void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob);
+void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob);
 
 void stagpoint_move(Isol& isol,Glob& glob,const Foil& foil,const Wake& wake,Vsol&vsol);
 

@@ -477,7 +477,7 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, Param&param, Isol&iso
 }
 
 
-/*
+
 void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob) {
     
     constexpr int Nsys = Ncoords + Nwake;
@@ -695,4 +695,3 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
 
 }
 
-*/

@@ -11,10 +11,9 @@ BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
 EXEC_FWD = os.path.join(BIN_DIR, "CFoil_fwd")
 EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
 EXEC_NOISE = os.path.join(BIN_DIR, "CFoil_Noise")
-def use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,ncrit):
-    
-    completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf,trackCLs,ncrit)
-    return completed
+
+
+
 
 def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,custNcrits,topncrit,botncrit,breakloopInt):
     
@@ -199,6 +198,13 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
     #    success =    use_xfoil(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,ncrit)
     #    return success,0.0,0.0
 
+
+
+def xfoil_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,custNcrits,topncrit,botncrit,breakloopInt):
+
+    success = xfoil_start_run(EXEC_FWD,xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,custNcrits,topncrit,botncrit,breakloopInt)
+
+    return success
 
 def grad_run(doSound=0):
     # Run the AD version of the code, using known solution from fwd run
