@@ -41,7 +41,6 @@ bool runCode(
     const Real &topTransPos,
     const Real &botTransPos,
     const bool force,
-    const bool Ncrit,
     const Real topNcrit,
     const Real botNcrit){
 
@@ -531,7 +530,6 @@ int main(){
     const Real topTransPos = j["toptrans"].get<double>();
     const Real botTransPos = j["bottrans"].get<double>();
     
-    const bool custNcrits =  j["custncrits"].get<int>();
     const Real topNcrit = j["topncrit"].get<double>();
     const Real botNcrit = j["botncrit"].get<double>();
 
@@ -559,7 +557,7 @@ int main(){
     #endif
     
 
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,custNcrits,topNcrit,botNcrit);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,topNcrit,botNcrit);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;
