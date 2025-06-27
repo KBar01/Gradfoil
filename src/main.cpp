@@ -40,7 +40,10 @@ bool runCode(
     const Real TEfac,
     const Real &topTransPos,
     const Real &botTransPos,
-    const bool force){
+    const bool force,
+    const bool Ncrit,
+    const Real topNcrit,
+    const Real botNcrit){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -208,13 +211,13 @@ bool runCode(
     //}
     
     else {
-        init_boundary_layer(oper,foil,param,isol,vsol,glob,tdata,force);
+        init_boundary_layer(oper,foil,param,isol,vsol,glob,tdata,force,topNcrit,botNcrit);
     }
     #endif
 
     stagpoint_move(isol,glob,foil,wake,vsol);
 
-    bool converged = solve_coupled(oper,foil,wake,param,vsol,isol,glob,tdata,force);
+    bool converged = solve_coupled(oper,foil,wake,param,vsol,isol,glob,tdata,force,topNcrit,botNcrit);
 
     Post post;
     calc_force(oper,geom,param,isol,foil,glob,post);
@@ -527,6 +530,11 @@ int main(){
     const bool force = j["forcetrans"].get<int>();
     const Real topTransPos = j["toptrans"].get<double>();
     const Real botTransPos = j["bottrans"].get<double>();
+    
+    const bool custNcrits =  j["custncrits"].get<int>();
+    const Real topNcrit = j["topncrit"].get<double>();
+    const Real botNcrit = j["botncrit"].get<double>();
+
 
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
@@ -550,7 +558,8 @@ int main(){
     
     #endif
     
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force);
+
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,custNcrits,topNcrit,botNcrit);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;

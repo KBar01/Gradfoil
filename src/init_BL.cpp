@@ -177,7 +177,7 @@ void wake_init(const Vsol& vsol, const Foil& foil, const Glob& glob, const Param
 
 
 
-void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Isol&isol, Vsol&vsol, Glob&glob, Trans&tdata, const bool force) {
+void init_boundary_layer(const Oper&oper, const Foil&foil, Param&param, Isol&isol, Vsol&vsol, Glob&glob, Trans&tdata, const bool force, const Real topNcrit, const Real botNcrit) {
     
     constexpr int Nsys = Ncoords + Nwake;
     const Real Hmaxl = 3.8;
@@ -188,6 +188,13 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, const Param&param, Is
 
     for (int surf = 0; surf < 3; ++surf) {
 
+
+        if (surf != 1){
+            param.ncrit = botNcrit;
+        }
+        else{
+            param.ncrit = topNcrit;
+        }
 
         const std::vector<int> indexList = vsol.Is[surf] ;
         int N = indexList.size(); // How many nodes are on this surface

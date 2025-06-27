@@ -72,7 +72,7 @@ void stagnation_state(const Real*U1,const Real*U2,const Real x1,const Real x2,
 }
 
 
-void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob,const Param&param, Trans&tdata){
+void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, Param&param, Trans&tdata,const Real topNcrit, const Real botNcrit){
     
     constexpr int RVsize = 4*(Ncoords+Nwake);
     constexpr int RXsize = 3*(Ncoords+Nwake);
@@ -82,6 +82,14 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob,co
 
     const Real* xi = isol.distFromStag;
     for (int si = 0; si < 3; ++si) {    // for each surface (upper/lower/wake)
+        
+        
+        if (si != 1){
+            param.ncrit = botNcrit;
+        }
+        else{
+            param.ncrit = topNcrit;
+        }
         
         const std::vector<int>& Is = vsol.Is[si]; // list of surface node indices from stag point
         const int nSurfPoints = Is.size();
