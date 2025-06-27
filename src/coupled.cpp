@@ -37,14 +37,6 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
         
         build_glob_RV(foil, vsol, isol, glob, param,tdata,topNcrit,botNcrit);
 
-        Real residualNorm = euc_norm(glob.R, Rsize);
-        
-
-        //if (residualNorm < param.rtol) {
-        //    converged = true;
-        //    break;
-        //}
-        
         solve_glob(foil, isol, glob, vsol, oper);
 
         update_state(oper, param, glob, vsol);
@@ -57,6 +49,14 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
         stagpoint_move(isol, glob, foil, wake, vsol);
      
         update_transition(glob, vsol, isol, param, tdata, force,topNcrit,botNcrit);
+
+        build_glob_RV(foil, vsol, isol, glob, param,tdata,topNcrit,botNcrit);
+
+        Real residualNorm = euc_norm(glob.R, Rsize);
+
+        if (residualNorm < param.rtol) {
+            converged = true;
+        }
     }
 
     return converged;
@@ -73,15 +73,15 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
     for (int i = 0; i < 50; ++i) {
         
-        
         build_glob_RV(foil, vsol, isol, glob, param,tdata,topNcrit,botNcrit);
         
         Real residualNorm = euc_norm(glob.R, Rsize);
         
-        if (residualNorm < param.rtol) {
+        if ((residualNorm < param.rtol) || (i == param.breakLoop)) {
             
             clear_RV(glob, isol, vsol, foil, param);
             converged = true;
+            glob.convergenceIteration = i;
             break;
         }
         

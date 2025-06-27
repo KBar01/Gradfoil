@@ -167,10 +167,13 @@ struct Vsol {
 struct Glob {
     Real U[4*(Ncoords+Nwake)] = {0};  // Primary states (th, ds, sa, ue)
     Real dU[4*(Ncoords+Nwake)] = {0}; // Primary state update                   // Converged flag
+    Real prevU[4*(Ncoords+Nwake)] = {0};  // Primary states (th, ds, sa, ue)
     Real R[4*(Ncoords+Nwake)] = {0.0};                 // Residuals
     //std::vector<std::vector<Real>> R_U;  // Residual Jacobian w.r.t. primary states
     //Real R_x[3*(Ncoords+Nwake) * (Ncoords+Nwake)] = {0.0};  // Residual Jacobian w.r.t. xi (s-values)
     Real R_V[4*(Ncoords+Nwake) * 4*(Ncoords+Nwake)] = {0.0}; // Global Jacobian
+
+    int convergenceIteration = 100 ;
 };
 
 
@@ -209,7 +212,7 @@ struct Param {
     Real rho0 = 1.0, H0 = 0.0, Tsrat = 0.35, gam = 1.4;
     Real KTb = 1.0, KTl = 0.0, cps = 0.0;
 
-
+    int breakLoop = 100;
 
 };
 

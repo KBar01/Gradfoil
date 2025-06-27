@@ -42,7 +42,8 @@ bool runCode(
     const Real &botTransPos,
     const bool force,
     const Real topNcrit,
-    const Real botNcrit){
+    const Real botNcrit,
+    const int breakLoop){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -156,6 +157,7 @@ bool runCode(
     Foil foil(flattenedCoords);
     Isol isol;
     Param param;
+    param.breakLoop = breakLoop;
     param.ncrit = nCrit;
     Wake wake;
     Vsol vsol;
@@ -298,6 +300,8 @@ bool runCode(
         out["CL"]  = post.cl;
         out["CD"]  = post.cd;
 
+        out["convergenceIt"] = glob.convergenceIteration;
+
         #if DO_BL_GRADIENT
         out[outputNames[2]] = topsurf[0];
         out[outputNames[3]] = topsurf[1];
@@ -343,6 +347,7 @@ bool runCode(
             out["stagnation"] = isol.stagIndex;
             out["topTransX"]  = topTransX;
             out["botTransX"]  = botTransX;
+            
             
             out["Cf"] = Cf_Uinf;
             std::vector<std::string> BLoutputNames = {"CL", "CD",
@@ -533,6 +538,7 @@ int main(){
     const Real topNcrit = j["topncrit"].get<double>();
     const Real botNcrit = j["botncrit"].get<double>();
 
+    const int breakLoop = j["breakloop"].get<int>();
 
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
@@ -557,7 +563,7 @@ int main(){
     #endif
     
 
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,topNcrit,botNcrit);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,topNcrit,botNcrit,breakLoop);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;
