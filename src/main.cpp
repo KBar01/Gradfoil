@@ -300,7 +300,7 @@ bool runCode(
         out["CL"]  = post.cl;
         out["CD"]  = post.cd;
 
-        out["convergenceIt"] = glob.convergenceIteration;
+        out["conv"] = 1;
 
         #if DO_BL_GRADIENT
         out[outputNames[2]] = topsurf[0];
@@ -371,6 +371,16 @@ bool runCode(
             out[BLoutputNames[15]] = botsurf[6];
         }
 
+        std::ofstream outFile("out.json");
+        outFile << out.dump(4);  // pretty print with 4 spaces indentation
+        outFile.close();
+
+    }
+
+    else{
+
+        json out;
+        out["conv"] = 0;
         std::ofstream outFile("out.json");
         outFile << out.dump(4);  // pretty print with 4 spaces indentation
         outFile.close();

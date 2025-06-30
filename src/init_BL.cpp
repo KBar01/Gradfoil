@@ -579,7 +579,7 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
             
             if (tran) {
                 
-                residual_transition(prevState,currState,isol.distFromStag[prevNode],isol.distFromStag[currNode],0,0,param,R,R_U,R_x);
+                residual_transition(prevState,currState,isol.distFromStag[prevNode],isol.distFromStag[currNode],0,0,param,0,0.0,R,R_U,R_x);
             } 
             else {
 
