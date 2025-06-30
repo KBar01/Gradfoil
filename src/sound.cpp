@@ -93,7 +93,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     for (int i=0;i<Nsound;++i){
         
         Real SppSum = SppLower[i] + SppUpper[i];
-        SppTotal[i] = SppSum*2*M_PI;
+        SppTotal[i] = 4*SppSum*2*M_PI;
     }
 
     // Trapezoidal integration over frequency
@@ -115,6 +115,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
         amiet["phiqqlower"] = phiqqLower;
         amiet["sppupper"]   = SppUpper;
         amiet["spplower"]   = SppLower;
+        amiet["spptotal"]   = SppTotal;
         std::ofstream amietFile("amiet.json");
         amietFile << amiet.dump(4);  // pretty print with 4 spaces indentation
         amietFile.close();
