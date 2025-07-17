@@ -18,6 +18,9 @@ Real calc_S_qq_Amiet_goody(
     const Real dpdx        // Pressure gradient [Pa/m] (not used)
 );
 
+void calc_S_qq_Amiet_TNO(const Real (&omega)[Nsound],const Real Ue, const Real Uinf, const Real rho,const Real tau_w,
+    const Real delta,const Real delta_star,const Real theta,const Real dpdx, Real (&phi)[Nsound]);
+
 
 Real calc_Spp_Freq(
     Real c0,  Real rho0, Real C,Real MX, Real omega,

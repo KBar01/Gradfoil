@@ -74,10 +74,10 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
 
 #ifdef USE_CODIPACK
 #if DO_SOUND
-Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S,const int doCps);
+Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S,const int doCps,const int Roz);
 #endif
 #else
-Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S,const int doCps);
+Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S,const int doCps,const int Roz);
 #endif
 
 #endif

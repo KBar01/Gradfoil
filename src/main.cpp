@@ -43,7 +43,8 @@ bool runCode(
     const bool force,
     const Real topNcrit,
     const Real botNcrit,
-    const int breakLoop){
+    const int breakLoop,
+    const int Roz){
 
     auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
@@ -224,11 +225,11 @@ bool runCode(
     calc_force(oper,geom,param,isol,foil,glob,post);
 
     #ifndef USE_CODIPACK
-    Real Cf_Uinf[Ncoords];
+    Real tauWall[Ncoords];
     if (doCps){
         Real cf_U[4]={0};
         for (int i=0;i<Ncoords;++i){
-            Cf_Uinf[i] = get_cf(glob.U[colMajorIndex(0,i,4)],
+            tauWall[i] = get_cf(glob.U[colMajorIndex(0,i,4)],
                                 glob.U[colMajorIndex(1,i,4)],
                                 glob.U[colMajorIndex(2,i,4)],
                                 glob.U[colMajorIndex(3,i,4)],
@@ -238,7 +239,7 @@ bool runCode(
                                 cf_U
             );
             
-            Cf_Uinf[i] *= ((glob.U[colMajorIndex(3,i,4)] * glob.U[colMajorIndex(3,i,4)]));
+            tauWall[i] *=  (oper.rho*(glob.U[colMajorIndex(3,i,4)]*Uinf * glob.U[colMajorIndex(3,i,4)]*Uinf))/2;
         }
     }
     #endif
@@ -257,14 +258,14 @@ bool runCode(
 
     interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,param,topsurf,botsurf,Uinf,geom,(sampleTE*geom.chord));
 
-
+    
     // if codipack, only use sound code if sound flag on. if not codipack run sound regardless
     #ifdef USE_CODIPACK
     #if DO_SOUND
-    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps);
+    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps,Roz);
     #endif
     #else
-    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps);
+    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps,Roz);
     #endif
 
     auto end = std::chrono::high_resolution_clock::now();
@@ -349,7 +350,7 @@ bool runCode(
             out["botTransX"]  = botTransX;
             
             
-            out["Cf"] = Cf_Uinf;
+            out["tauWall"] = tauWall;
             std::vector<std::string> BLoutputNames = {"CL", "CD",
                 "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
                 "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"
@@ -549,6 +550,7 @@ int main(){
     const Real botNcrit = j["botncrit"].get<double>();
 
     const int breakLoop = j["breakloop"].get<int>();
+    const int Roz = j["userozenburg"].get<int>();
 
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
@@ -573,7 +575,7 @@ int main(){
     #endif
     
 
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,topNcrit,botNcrit,breakLoop);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,topNcrit,botNcrit,breakLoop,Roz);
     
     std::cout << "converged: " << converged << std::endl ;
     return converged;

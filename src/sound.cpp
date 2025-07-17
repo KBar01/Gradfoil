@@ -26,6 +26,7 @@ void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,c
 
     for (int i=0;i<Nsound;++i){
         Spp[i]  = calc_Spp_Freq(340, oper.rho, geom.chord, (Uinf/340), omega[i], X, Y, Z, S, phiqq[i], 0);
+        Spp[i] *= 4 * 2*M_PI;
     }
 }
 
@@ -48,7 +49,26 @@ void calc_Spp_Goody(const Real theta,const Real deltaStar,const Real delta,const
 }
 
 
-Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S,const int doCps){
+void calc_Spp_TNO(const Real theta,const Real deltaStar,const Real delta, const Real Ue,const Real tau,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
+
+    // start exp : 2 (100Hz)
+    // final exp : 4.30103 (20,000 Hz)
+
+
+    // loop over this with different omega vals
+    Real rho = 1.2;
+    
+    calc_S_qq_Amiet_TNO(omega,Ue,Uinf,rho,tau,delta,deltaStar,theta,dpdx,phiqq);
+
+    for (int i=0;i<Nsound;++i){
+        Spp[i]  = calc_Spp_Freq(340, oper.rho, geom.chord, (Uinf/340), omega[i], X, Y, Z, S, phiqq[i], 0);
+        Spp[i] *= 4 * 2*M_PI;
+    }
+}
+
+
+
+Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S,const int doCps,const int Roz){
 
     const Real startExp = 2.0; // start exp : 2 (100Hz)
     const Real endExp = 4.30103; // final exp : 4.30103 (20,000 Hz)
@@ -74,9 +94,14 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     Real delta = topStates[6];    
     
     if (tauMax > 0.0){ 
-    calc_Spp_Rozenburg(theta,deltaS,delta,tauMax,edgeVel,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
+    
+        if (Roz){
+            calc_Spp_Rozenburg(theta,deltaS,delta,tauWall,edgeVel,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
+        }
+        else{
+            calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
+        }
     }
-
     theta = botStates[0];
     deltaS = botStates[1];
     tauMax = botStates[2];
@@ -86,14 +111,17 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     delta = botStates[6];  
 
     if (tauMax > 0.0){ 
-    calc_Spp_Rozenburg(theta,deltaS,delta,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
+        if (Roz){
+                calc_Spp_Rozenburg(theta,deltaS,delta,tauWall,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
+            }
+            else{
+                calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
+            }
     }
     
     Real SppTotal[Nsound];
     for (int i=0;i<Nsound;++i){
-        
-        Real SppSum = SppLower[i] + SppUpper[i];
-        SppTotal[i] = 4*SppSum*2*M_PI;
+        SppTotal[i] = SppLower[i] + SppUpper[i];
     }
 
     // Trapezoidal integration over frequency
@@ -110,7 +138,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     if (doCps){
         
         json amiet;
-        amiet["omega"] = omega;
+        amiet["freq"] = Freq;
         amiet["phiqqupper"] = phiqqUpper;
         amiet["phiqqlower"] = phiqqLower;
         amiet["sppupper"]   = SppUpper;

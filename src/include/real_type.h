@@ -24,5 +24,6 @@
 #define Nfine 501
 #define Nin 301
 #define Nsound 500
+#define NblPoints 150
 
 #endif

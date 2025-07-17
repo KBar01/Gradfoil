@@ -258,7 +258,7 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
     Real deltaBot = 0.0;
     Real frictionVel = std::sqrt(tauWallBot/oper.rho) ;
     if (tauWallBot!=0.0){
-        turbulent_BL_profile_XFOIL(botBLStates[0],botBLStates[3],frictionVel,((1.789e-5)/oper.rho),deltaBot);
+        deltaBot = botBLStates[0]*(3.15 + 1.72/((botBLStates[1]/botBLStates[0]) - 1)) + botBLStates[1] ;
     }
     botBLStates[6] = deltaBot;
 
@@ -281,7 +281,7 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
     Real deltaTop = 0.0;
     frictionVel = std::sqrt(tauWallTop/oper.rho) ;
     if (tauWallTop!=0.0){
-        turbulent_BL_profile_XFOIL(topBLStates[0],topBLStates[3],frictionVel,((1.789e-5)/oper.rho),deltaTop);
+        deltaTop = topBLStates[0]*(3.15 + 1.72/((topBLStates[1]/topBLStates[0]) - 1)) + topBLStates[1] ;
     }
     
     topBLStates[6] = deltaTop;
