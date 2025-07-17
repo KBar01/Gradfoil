@@ -106,7 +106,7 @@ void compute_TNO_fields(const Real* y2, const Real delta, const Real ustar, cons
         Real y2_ratio = y2[i] / delta;
 
         U1[i] = TNO_velocity_profile(y2[i], delta, ustar, (Ue/U0), U0,nu,kappa,B);
-        dU[i] = analytic_Derivative(y2[i],delta,ustar,(Ue*U0),U0,nu,kappa,B);
+        dU[i] = analytic_Derivative(y2[i],delta,ustar,(Ue/U0),U0,nu,kappa,B);
 
         // Mixing length
         Real lm_tmp = 0.085 * delta * std::tanh(kappa * y2[i] / (0.085 * delta));
