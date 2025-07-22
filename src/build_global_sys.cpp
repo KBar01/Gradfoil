@@ -72,7 +72,7 @@ void stagnation_state(const Real*U1,const Real*U2,const Real x1,const Real x2,
 }
 
 
-void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, Param&param, Trans&tdata,const Real topNcrit, const Real botNcrit){
+void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, Param&param, Trans&tdata){
     
     constexpr int RVsize = 4*(Ncoords+Nwake);
     constexpr int RXsize = 3*(Ncoords+Nwake);
@@ -83,14 +83,7 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, P
     const Real* xi = isol.distFromStag;
     for (int si = 0; si < 3; ++si) {    // for each surface (upper/lower/wake)
         
-        
-        if (si != 1){
-            param.ncrit = botNcrit;
-        }
-        else{
-            param.ncrit = topNcrit;
-        }
-        
+
         const std::vector<int>& Is = vsol.Is[si]; // list of surface node indices from stag point
         const int nSurfPoints = Is.size();
 
@@ -210,17 +203,22 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, P
                 int isForced = tdata.isForced[si];
                 Real transPos = tdata.transPos[si];
 
-                // do linear interp to find y value
-                Real x1 = foil.x[colMajorIndex(0,Is[prevI],2)],y1 = foil.x[colMajorIndex(1,Is[prevI],2)];
-                Real x2 = foil.x[colMajorIndex(0,Is[currI],2)],y2 = foil.x[colMajorIndex(1,Is[currI],2)];
+                if (!isForced){
+                    residual_transition(Uprev,Ucurr,xi[Is[prevI]],xi[Is[currI]],0,0,param,Ri,Ri_U,Ri_x);
+                }
+                else {
 
-                Real yt = y1 + ((tdata.transPos[si] - x1) / (x2 - x1)) * (y2 - y1);
-                
-                Real distFromStagTrans =  isol.distFromStag[Is[prevI]] + std::sqrt((tdata.transPos[si]-x1)*(tdata.transPos[si]-x1)  + (yt-y1)*(yt-y1));
+                    // do linear interp to find y value
+                    Real x1 = foil.x[colMajorIndex(0,Is[prevI],2)],y1 = foil.x[colMajorIndex(1,Is[prevI],2)];
+                    Real x2 = foil.x[colMajorIndex(0,Is[currI],2)],y2 = foil.x[colMajorIndex(1,Is[currI],2)];
 
+                    Real yt = y1 + ((tdata.transPos[si] - x1) / (x2 - x1)) * (y2 - y1);                
+                    Real distFromStagTrans =  isol.distFromStag[Is[prevI]] + std::sqrt((tdata.transPos[si]-x1)*(tdata.transPos[si]-x1) + (yt-y1)*(yt-y1));
 
-                residual_transition(Uprev,Ucurr,xi[Is[prevI]],xi[Is[currI]],0,0,param,isForced,distFromStagTrans,Ri,Ri_U,Ri_x);}
-            else{
+                    residual_transition_forced(Uprev,Ucurr,xi[Is[prevI]],xi[Is[currI]],param,distFromStagTrans,Ri,Ri_U,Ri_x);
+                }
+            }
+            else {
                 Real aux1=0,aux2=0;
                 if (wake){aux1=vsol.wgap[Is[prevI]-Ncoords];aux2 = vsol.wgap[Is[currI]-Ncoords] ;}
                 residual_station(Uprev,Ucurr,xi[Is[prevI]],xi[Is[currI]],aux1,aux2,wake,turb,false,param,Ri,Ri_U,Ri_x);

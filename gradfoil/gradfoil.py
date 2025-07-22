@@ -15,13 +15,8 @@ EXEC_NOISE = os.path.join(BIN_DIR, "CFoil_Noise")
 
 
 
-def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,custNcrits,topncrit,botncrit,breakloopInt,useRoz):
+def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,useRoz,rho,nu):
     
-    
-    if not custNcrits : 
-        topncrit = ncrit
-        botncrit = ncrit
-
 
     cwd = os.getcwd()
     in_json_path = os.path.join(cwd, "input.json")
@@ -31,6 +26,8 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         "alpha_degrees": alphaDeg,
         "Re":            Re,
         "Ma":            Ma,
+        "rho":           rho,
+        "nu":            nu,
         "restart":       0,
         "xfoilstart":    0,
         "xfoilgetpoints":0,
@@ -48,10 +45,6 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         "toptrans":      toptrans,
         "bottrans":      bottrans,
         "forcetrans":    force,
-        "custncrits":    custNcrits,
-        "topncrit":      topncrit,
-        "botncrit":      botncrit,
-        "breakloop":     breakloopInt,
         "userozenburg":  useRoz
     }
 
@@ -176,12 +169,12 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
 
 
 
-def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0,Uinf=1,custUinf=0,trackCLs=0,returnFoilCps=0,ncrit=9.0,Ufac=2.5,TEfac=0.06,toptrans=0.5,bottrans=0.5,forcetrans=0,custNcrits=0,topncrit=9.0,botncrit=9.0,breakloopInt=100,repanel=1,useRoz=1):
+def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0,Uinf=1,custUinf=0,trackCLs=0,returnFoilCps=0,ncrit=9.0,Ufac=2.5,TEfac=0.06,toptrans=0.5,bottrans=0.5,forcetrans=0,rho=1.225,nu=1.789e-5,repanel=1,useRoz=1):
     
     
 
     if repanel:
-        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,forcetrans,custNcrits,topncrit,botncrit,breakloopInt,useRoz)
+        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,forcetrans,useRoz,rho,nu)
 
         if success:
             return success
@@ -190,7 +183,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
             for uf, tef in [(3.5, 0.05), (4.0,0.05), (3.0,0.1), (2.5,0.7), (1.0,0.1), (1.0,0.05)]:
                 
                 print('trying different panel distribution ('+str(count)+'/6)')
-                success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef,toptrans,bottrans,forcetrans,custNcrits,topncrit,botncrit,breakloopInt,useRoz)
+                success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef,toptrans,bottrans,forcetrans,useRoz,rho,nu)
                 if success:
                     break
                 count +=1
@@ -198,7 +191,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
             return success
     
     else:
-        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,forcetrans,custNcrits,topncrit,botncrit,breakloopInt,useRoz)
+        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,forcetrans,useRoz,rho,nu)
         return success
     
 

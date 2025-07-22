@@ -26,7 +26,7 @@ Real euc_norm(const Real* R, int size) {
 
 #ifdef USE_CODIPACK
 bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
-    Param& param, Vsol& vsol, Isol& isol, Glob& glob, Trans&tdata, const bool force, const Real topNcrit, const Real botNcrit) {
+    Param& param, Vsol& vsol, Isol& isol, Glob& glob, Trans&tdata, const bool force) {
 
     int nNewton = param.niglob;
     bool converged = false;
@@ -35,7 +35,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
     for (int i = 0; i < 1; ++i) {
         
-        build_glob_RV(foil, vsol, isol, glob, param,tdata,topNcrit,botNcrit);
+        build_glob_RV(foil, vsol, isol, glob, param,tdata);
 
         solve_glob(foil, isol, glob, vsol, oper);
 
@@ -48,9 +48,9 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
         stagpoint_move(isol, glob, foil, wake, vsol);
      
-        update_transition(glob, vsol, isol, param, tdata, force,topNcrit,botNcrit);
+        update_transition(glob, vsol, isol, param, tdata, force);
 
-        build_glob_RV(foil, vsol, isol, glob, param,tdata,topNcrit,botNcrit);
+        build_glob_RV(foil, vsol, isol, glob, param,tdata);
 
         Real residualNorm = euc_norm(glob.R, Rsize);
 
@@ -64,7 +64,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
 #else
 bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
-    Param& param, Vsol& vsol, Isol& isol, Glob& glob, Trans&tdata, const bool force, const Real topNcrit, const Real botNcrit) {
+    Param& param, Vsol& vsol, Isol& isol, Glob& glob, Trans&tdata, const bool force) {
 
     int nNewton = param.niglob;
     bool converged = false;
@@ -73,7 +73,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
     for (int i = 0; i < 50; ++i) {
         
-        build_glob_RV(foil, vsol, isol, glob, param,tdata,topNcrit,botNcrit);
+        build_glob_RV(foil, vsol, isol, glob, param,tdata);
         
         Real residualNorm = euc_norm(glob.R, Rsize);
         
@@ -96,7 +96,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
         stagpoint_move(isol, glob, foil, wake, vsol);
         
-        update_transition(glob, vsol, isol, param, tdata, force,topNcrit,botNcrit);
+        update_transition(glob, vsol, isol, param, tdata, force);
 
     }
 

@@ -80,18 +80,11 @@ int march_amplification(Glob &glob, Vsol &vsol, Isol &isol, int si, const Param&
 }
 
 
-void update_transition(Glob &glob, Vsol &vsol, Isol &isol, Param&param, Trans&tdata,const bool force,const Real topNcrit, const Real botNcrit) {
+void update_transition(Glob &glob, Vsol &vsol, Isol &isol, Param&param, Trans&tdata,const bool force) {
     
     
     for (int si = 0; si < 2; ++si) {
         
-
-        if (si != 1){
-            param.ncrit = botNcrit;
-        }
-        else{
-            param.ncrit = topNcrit;
-        }
 
         const std::vector<int> &Is = vsol.Is[si];
         int nSurfPoints = Is.size();

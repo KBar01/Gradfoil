@@ -730,8 +730,6 @@ void residual_transition(
     const Real aux1,
     const Real aux2,
     const Param& param,
-    const int force,
-    const Real transPos,
     Real (&R)[3],
     Real (&R_U)[24],
     Real (&R_x)[6]
@@ -760,50 +758,13 @@ void residual_transition(
     Real w1,w2;
     Real xt = x1 + 0.5 * dx; // initial guess
     
-    if (!force){
+    
 
-        // Not forcing transition, iteratively finding transition location within the panel
-        for (int iNewton = 0; iNewton < nNewton; ++iNewton) {
-            
-            // weights
-            w2 = (xt - x1)/dx, w1 =1-w2;
-
-            // State at transition point xt 
-            for (int i = 0; i < 4; ++i) {
-                Ut[i] = w1*U1[i] + w2*U2[i];
-                Ut_xt[i] = (U2[i]-U1[i])/dx;
-            }
-
-            Ut[2] = ncrit;   // amplification at transition
-            Ut_xt[2] = 0.0;
-
-            dampt = get_damp(Ut[0],Ut[1],Ut[2],Ut[3],param,dampt_Ut);
-            dampt_Ut[2] = 0.0;
-
-            Rxt = ncrit - sa1 - 0.5 * (xt-x1)*(damp1+dampt);
-            Rxt_xt = -0.5 * (damp1 + dampt);
-            for (int i = 0; i < 4; ++i){Rxt_xt -= 0.5*(xt-x1) * dampt_Ut[i]*Ut_xt[i];}
-
-            dxt = -Rxt / Rxt_xt;
-            Real dmax = 0.2 * dx * (1.1 - Real(iNewton) / nNewton);
-            if (std::abs(dxt) > dmax){ dxt *= dmax / std::abs(dxt);}
-            if (std::abs(Rxt) < 1e-10) break;
-
-            xt += dxt;
-        }
-    }
-    else {
-
-        /* OLD SINGLE USE RUN 
-        //forcing transition, setting xt manually
-
-        xt = transPos ; // 
+    // Not forcing transition, iteratively finding transition location within the panel
+    for (int iNewton = 0; iNewton < nNewton; ++iNewton) {
         
-        
-        //ncrit = U1[2] + ((xt - x1) / (x2-x1))* (U2[2] - U1[1]);
-
         // weights
-        w2 = (xt - x1)/dx, w1 = 1-w2;
+        w2 = (xt - x1)/dx, w1 =1-w2;
 
         // State at transition point xt 
         for (int i = 0; i < 4; ++i) {
@@ -816,52 +777,20 @@ void residual_transition(
 
         dampt = get_damp(Ut[0],Ut[1],Ut[2],Ut[3],param,dampt_Ut);
         dampt_Ut[2] = 0.0;
-        Rxt = ncrit - sa1 - 0.5 * (xt-x1)*(damp1+dampt);
 
-
+        Rxt = ncrit - sa1 - 0.5 * (damp1+dampt)*(xt-x1);
         Rxt_xt = -0.5 * (damp1 + dampt);
         for (int i = 0; i < 4; ++i){Rxt_xt -= 0.5*(xt-x1) * dampt_Ut[i]*Ut_xt[i];}
-        */
-        ///////////////////////////////////////////////////////////////////////////////
 
-        xt = transPos;
+        dxt = -Rxt / Rxt_xt;
+        Real dmax = 0.2 * dx * (1.1 - Real(iNewton) / nNewton);
+        if (std::abs(dxt) > dmax){ dxt *= dmax / std::abs(dxt);}
+        if (std::abs(Rxt) < 1e-10) break;
 
-        // Fixed weights and interpolated state
-        w2 = (xt - x1) / dx;
-        w1 = 1.0 - w2;
-
-        for (int iNewton = 0; iNewton < nNewton; ++iNewton) {
-
-            // Interpolate Ut at xt
-            for (int i = 0; i < 4; ++i) {
-                Ut[i] = w1 * U1[i] + w2 * U2[i];
-                Ut_xt[i] = (U2[i] - U1[i]) / dx;
-            }
-
-            Ut[2] = ncrit;    // current guess of ncrit
-            Ut_xt[2] = 0.0;
-
-            dampt = get_damp_forced(Ut[0], Ut[1], Ut[2], Ut[3], param,ncrit, dampt_Ut);
-            damp1 = get_damp_forced(th1,ds1,sa1,ue1,param,ncrit,damp1_U1);
-            dampt_Ut[2] = 0.0; // since Ut[2] is fixed here
-
-            Rxt = ncrit - sa1 - 0.5 * (xt - x1) * (damp1 + dampt);
-
-            // Derivative dRxt/dncrit = 1 - 0.5*(xt - x1)*∂dampt/∂ncrit
-            Real Rxt_ncrit = 1.0 - 0.5 * (xt - x1) * dampt_Ut[2];  // this is safe even if 0
-
-            Real dncrit = -Rxt / Rxt_ncrit;
-            //Real dmax = 0.2 * (1.1 - Real(iNewton) / nNewton);  // soft limit
-            //if (std::abs(dncrit) > dmax) dncrit *= dmax / std::abs(dncrit);
-            
-            if (std::abs(Rxt) < 1e-10) break;
-            ncrit += dncrit;
-            
-        }
-
-
+        xt += dxt;
     }
-
+    
+    
     Real Rxt_U[8] = {0};
     for (int i = 0; i < 4; ++i) {
         Rxt_U[i]   = -0.5 * (xt-x1) * (damp1_U1[i] + dampt_Ut[i]*w1);
@@ -874,11 +803,15 @@ void residual_transition(
         Ut_x1[i] = (U2[i]-U1[i]) * (w2 - 1) / dx;
         Ut_x2[i] = (U2[i]-U1[i]) * (-w2) / dx;
     }
+    
+    
+    // for natural transition the amp is fixed at Ut
     Ut_x1[2] = 0;
     Ut_x2[2] = 0;
     
-    Real Rxt_x1 = 0.5 * (damp1 + dampt);    // should be zero when fixes
-    Real Rxt_x2 = 0.0;                      // should be zero when fixed
+    
+    Real Rxt_x1 = 0.5 * (damp1 + dampt);    
+    Real Rxt_x2 = 0.0;                    
     for (int i = 0; i < 4; ++i) {
         Rxt_x1 -= 0.5 * (xt - x1) * dampt_Ut[i] * Ut_x1[i];
         Rxt_x2 -= 0.5 * (xt - x1) * dampt_Ut[i] * Ut_x2[i];
@@ -886,28 +819,14 @@ void residual_transition(
 
     // sensitivity of xt w.r.t. U,x from Rxt(xt,U,x) = 0 constraint
     Real xt_U[8]={0}, xt_U1[4]={0}, xt_U2[4]={0};
-    //Real xt_x1 = -Rxt_x1 / Rxt_xt;      // zero when fixed
-    Real zero = 0.0 ;
-    Real xt_x1 = force ? zero : -Rxt_x1 / Rxt_xt;
-    //Real xt_x2 = -Rxt_x2 / Rxt_xt;      // zero when fixed
-    Real xt_x2 = force ? zero : -Rxt_x2 / Rxt_xt;
+    Real xt_x1 = -Rxt_x1 / Rxt_xt;
+    Real xt_x2 = -Rxt_x2 / Rxt_xt;
     
-    if (!force){
-        for (int i = 0; i < 8; ++i){xt_U[i] = -Rxt_U[i] / Rxt_xt;}
-    
-        for (int i = 0; i < 4; ++i) {
-            xt_U1[i] = xt_U[i];
-            xt_U2[i] = xt_U[i+4];
-        }
+    for (int i = 0; i < 8; ++i){xt_U[i] = -Rxt_U[i] / Rxt_xt;}
 
-    }
-    else{
-        for (int i = 0; i < 8; ++i){xt_U[i] = 0.0;}   // location is fixed so derivatives are 0
-        for (int i = 0; i < 4; ++i) {
-            xt_U1[i] = 0.0;
-            xt_U2[i] = 0.0;
-        }
-
+    for (int i = 0; i < 4; ++i) {
+        xt_U1[i] = xt_U[i];
+        xt_U2[i] = xt_U[i+4];
     }
 
     for (int i = 0; i < 4; ++i) {
@@ -927,6 +846,7 @@ void residual_transition(
     Real Utl[4] = {0}, Utt[4] = {0}, Utl_x1[4] = {0}, Utl_x2[4] = {0}, Utt_x1[4] = {0}, Utt_x2[4] = {0};
     Real Utl_U1[16] = {0}, Utl_U2[16] = {0}, Utt_U1[16] = {0}, Utt_U2[16] = {0};
 
+    
     for (int i = 0; i < 4; ++i) {
         Utl[i] = Ut[i]; Utt[i] = Ut[i];
         Utl_x1[i] = Ut_x1[i]; Utl_x2[i] = Ut_x2[i];
@@ -945,7 +865,6 @@ void residual_transition(
         Utl_U2[2 + 4*j] = 0.0;
     }
 
-    // param.turb = true;
     Real cttr, cttr_Ut[4]={0};
     cttr = get_cttr(Ut[0],Ut[1],Ut[2],Ut[3],true,param,cttr_Ut);
     Utt[2] = cttr;
@@ -967,19 +886,12 @@ void residual_transition(
 
     //param.turb = false;
     Real Rl[3]={0}, Rl_U[24]={0}, Rl_x[6]={0};
-    if (!force){
-        residual_station(U1, Utl, x1, xt, aux1, aux2, false, false, false, param, Rl, Rl_U, Rl_x);
-    }
-    else {residual_station_forced(U1, Utl, x1, xt, aux1, aux2, false, false, false, param, ncrit, Rl, Rl_U, Rl_x);}
-
+    residual_station(U1, Utl, x1, xt, aux1, aux2, false, false, false, param, Rl, Rl_U, Rl_x);
+    
     //param.turb = true;
     Real Rt[3]={0}, Rt_U[24]={0}, Rt_x[6]={0};
-    
-    if (!force){
     residual_station(Utt, U2, xt, x2, aux1, aux2, false, true, false, param, Rt, Rt_U, Rt_x);
-    }
-    else{residual_station_forced(Utt, U2, xt, x2, aux1, aux2, false, true, false, param,ncrit, Rt, Rt_U, Rt_x);}
-    
+
     for (int i = 0; i < 3; ++i){
         R[i] = Rl[i] + Rt[i];
     }
@@ -1004,7 +916,6 @@ void residual_transition(
         R_x[i] = Rl_x[i] + Rt_x[i] * xt_x1;        // dR/dx1
         R_x[i+3] = Rl_x[i+3] + Rt_x[i] * xt_x2;    // dR/dx2
     }
-
 
 
     Real R_U1[12] = {0},R_U2[12] = {0},tmp1[12]={0};
@@ -1041,6 +952,188 @@ void residual_transition(
     cnp::add_inplace<3>(R_x2,Rt_xCol1);
     cnp::scalar_mul<3>(Rl_xCol1,xt_x2,tmp2); cnp::add_inplace<3>(R_x2,tmp2);
     cnp::scalar_mul<3>(Rt_x,xt_x2,tmp2); cnp::add_inplace<3>(R_x2,tmp2);
+    cnp::matmat_mul<3,4,1>(Rl_Utl,Utl_x2,tmp2); cnp::add_inplace<3>(R_x2,tmp2);
+    cnp::matmat_mul<3,4,1>(Rt_Utt,Utt_x2,tmp2); cnp::add_inplace<3>(R_x2,tmp2);
+
+    cnp::hstack<3,3>(R_x1,R_x2,R_x) ;
+}
+
+
+void residual_transition_forced(
+    const Real* U1,
+    const Real* U2,
+    const Real x1,
+    const Real x2,
+    const Param& param,
+    const Real transPos,
+    Real (&R)[3],
+    Real (&R_U)[24],
+    Real (&R_x)[6]
+) {
+
+    const Real dx = x2 - x1;
+    Real ncrit = param.ncrit;
+
+    // Extract elements of BL States
+    Real th1 = U1[0],th2 = U2[0];
+    Real ds1 = U1[1],ds2 = U2[1];
+    Real sa1 = U1[2],sa2 = U2[2];
+    Real ue1 = U1[3],ue2 = U2[3];
+    Real Ut[4]={0}; // state at transiton (initially laminar)
+    
+
+    
+
+    // position is fixed, giving fixed weightings 
+    Real xt = transPos;
+   
+    // Fixed weights and interpolated state
+    Real w2 = (xt - x1) / dx;
+    Real w1 = 1.0 - w2;
+
+
+    for (int i = 0; i < 4; ++i){
+        Ut[i] = w1*U1[i] + w2*U2[i];
+    }
+    
+    // gradient of how transition states change wrt starting and ending locations (linear variation across panel)
+    Real Ut_x1[4]={0}, Ut_x2[4]={0};
+    for (int i = 0; i < 4; ++i) {
+        Ut_x1[i] = (U2[i]-U1[i]) * (w2 - 1) / dx;
+        Ut_x2[i] = (U2[i]-U1[i]) * (-w2) / dx;
+    }
+    
+
+    // gradient of transition state wrt start and end states (again linear interp across)
+    Real Ut_U1[16]={0}, Ut_U2[16]={0};
+    for (int i = 0; i < 4; ++i) {
+        int idx = colMajorIndex(i,i,4);  // Diagonal element in column-major
+        Ut_U1[idx] = w1;
+        Ut_U2[idx] = w2;
+    }
+
+    // Copy to Utl, Utt (laminar and turbulent transition states)
+    Real Utl[4] = {0}, Utt[4] = {0}, Utl_x1[4] = {0}, Utl_x2[4] = {0}, Utt_x1[4] = {0}, Utt_x2[4] = {0};
+    Real Utl_U1[16] = {0}, Utl_U2[16] = {0}, Utt_U1[16] = {0}, Utt_U2[16] = {0};
+
+    // coptying lam/turb states at the transition point
+    for (int i = 0; i < 4; ++i) {
+        Utl[i] = Ut[i];
+        Utt[i] = Ut[i];
+        Utl_x1[i] = Ut_x1[i];
+        Utl_x2[i] = Ut_x2[i];
+        Utt_x1[i] = Ut_x1[i];
+        Utt_x2[i] = Ut_x2[i];
+        for (int j = 0; j < 4; ++j) {
+            Utl_U1[i + 4*j] = Ut_U1[i + 4*j];
+            Utl_U2[i + 4*j] = Ut_U2[i + 4*j];
+            Utt_U1[i + 4*j] = Ut_U1[i + 4*j];
+            Utt_U2[i + 4*j] = Ut_U2[i + 4*j];
+        }
+    }
+    
+
+    // We dont care about the laminar amplicifcation growth at transition as we force it, so remove 
+    // residuals for that in Utl
+    Utl_x1[2] = 0.0;
+    Utl_x2[2] = 0.0;
+    for (int j = 0; j < 4; ++j){
+        Utl_U1[colMajorIndex(2,j,4)] = 0.0;
+        Utl_U2[colMajorIndex(2,j,4)] = 0.0;
+    }
+
+    // initialise the turb state with value of shear stress coeff (note Ut[2] has no effect)
+    Real cttr, cttr_Ut[4]={0};
+    cttr = get_cttr(Ut[0],Ut[1],Ut[2],Ut[3],true,param,cttr_Ut);
+    Utt[2] = cttr;
+    
+
+    // doing that dUtt/dU1 [2,:] = dot(dcttr/dUt, dUt/dU1)
+    // doing that dUtt/dU2 [2,:] = dot(dcttr/dUt, dUt/dU2)
+    // but dUt/dU1 is just diaginal with value of w1 so code is simpler: 
+    for (int j = 0; j < 4; ++j) {
+        Utt_U1[colMajorIndex(2,j,4)] = cttr_Ut[j] * w1;
+        Utt_U2[colMajorIndex(2,j,4)] = cttr_Ut[j] * w2;
+    }
+    
+    
+
+    // using dUtt/dx1 [2,:] = dot(dcttr/dUt, dUt/dx1)
+    // using dUtt/dx2 [2,:] = dot(dcttr/dUt, dUt/dx2)
+    Utt_x1[2] = 0.0;
+    Utt_x2[2] = 0.0;
+    for (int i = 0; i < 4; ++i) {
+        Utt_x1[2] += cttr_Ut[i] * Ut_x1[i];
+        Utt_x2[2] += cttr_Ut[i] * Ut_x2[i];
+    }
+
+    // residual for laminar section (remember that dont care about amplifcation residual here)
+    Real Rl[3]={0}, Rl_U[24]={0}, Rl_x[6]={0};
+    residual_station(U1, Utl, x1, xt, 0.0, 0.0, false, false, false, param, Rl, Rl_U, Rl_x);
+    
+    Rl[2] = 0.0;
+    for (int i = 0; i < 8; ++i) {
+        Rl_U[colMajorIndex(2,i,3)] = 0.0;
+    }
+     for (int i = 0; i < 2; ++i) {
+        Rl_x[colMajorIndex(2,i,3)] = 0.0;
+    }
+
+    // residual for the turbulent section, here residual for shear stress matters
+    Real Rt[3]={0}, Rt_U[24]={0}, Rt_x[6]={0};
+    residual_station(Utt, U2, xt, x2, 0.0, 0.0, false, true, false, param, Rt, Rt_U, Rt_x);
+
+    // sum residuals for total panel residuals
+    for (int i = 0; i < 3; ++i){
+        R[i] = Rl[i] + Rt[i];
+    }
+
+    Real Rl_U1[12]={0}, Rl_Utl[12]={0};
+    Real Rt_Utt[12]={0}, Rt_U2[12]={0};
+    
+    // seperating Rl_U correctly and Rt_U
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 4; ++c){
+            Rl_U1[colMajorIndex(r,c,3)]    = Rl_U[colMajorIndex(r, c, 3)];
+            Rl_Utl[colMajorIndex(r,c,3)]   = Rl_U[colMajorIndex(r, c+4, 3)];
+            Rt_Utt[colMajorIndex(r,c,3)]   = Rt_U[colMajorIndex(r, c, 3)];
+            Rt_U2[colMajorIndex(r,c,3)]    = Rt_U[colMajorIndex(r,c+4,3)];
+        }
+    }
+
+    // R_x = dRl/dx1 + dRl/dx2 + dRt/dx1 + dRt/dx2
+    for (int i = 0; i < 3; ++i) {
+        R_x[i] = Rl_x[i];       // dR/dx1
+        R_x[i+3] = Rl_x[i+3];  // dR/dx2
+    }
+
+
+    Real R_U1[12] = {0},R_U2[12] = {0},tmp1[12]={0};
+
+    // Calculate R_U1
+    cnp::add_inplace<12>(R_U1,Rl_U1);
+    cnp::matmat_mul<3,4,4>(Rl_Utl, Utl_U1, tmp1); cnp::add_inplace<12>(R_U1,tmp1);
+    cnp::matmat_mul<3,4,4>(Rt_Utt,Utt_U1, tmp1); cnp::add_inplace<12>(R_U1,tmp1);
+    
+    // Calculate R_U2
+    cnp::add_inplace<12>(R_U2,Rt_U2);
+    cnp::matmat_mul<3,4,4>(Rl_Utl,Utl_U2, tmp1); cnp::add_inplace<12>(R_U2,tmp1);
+    cnp::matmat_mul<3,4,4>(Rt_Utt,Utt_U2, tmp1); cnp::add_inplace<12>(R_U2,tmp1);
+    
+    cnp::hstack<12,12>(R_U1,R_U2,R_U); // combine into single Residual jacobian
+
+    // do R_x: 
+    Real R_x1[3]={0},R_x2[3]={0};
+    Real tmp2[3]={0};
+
+    const Real* Rl_xCol1 = Rl_x + 3;  // Rl_x[:,1]
+    const Real* Rt_xCol1 = Rt_x + 3;  // Rt_x[:,1]
+
+    cnp::add_inplace<3>(R_x1,Rl_x); // add Rl_x[:,0]
+    cnp::matmat_mul<3,4,1>(Rl_Utl,Utl_x1,tmp2); cnp::add_inplace<3>(R_x1,tmp2);
+    cnp::matmat_mul<3,4,1>(Rt_Utt,Utt_x1,tmp2); cnp::add_inplace<3>(R_x1,tmp2);
+
+    cnp::add_inplace<3>(R_x2,Rt_xCol1);
     cnp::matmat_mul<3,4,1>(Rl_Utl,Utl_x2,tmp2); cnp::add_inplace<3>(R_x2,tmp2);
     cnp::matmat_mul<3,4,1>(Rt_Utt,Utt_x2,tmp2); cnp::add_inplace<3>(R_x2,tmp2);
 

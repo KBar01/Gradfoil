@@ -23,6 +23,8 @@ bool runCode(
     Real alphad,
     Real Re, 
     Real Ma,
+    Real rhoInf,
+    Real dynViscInf,
     const Real (&inXcoords)[Nin], 
     Real (&inYcoords)[Nin],
     const Real (&statesInit)[RVdimension],
@@ -41,12 +43,8 @@ bool runCode(
     const Real &topTransPos,
     const Real &botTransPos,
     const bool force,
-    const Real topNcrit,
-    const Real botNcrit,
-    const int breakLoop,
     const int Roz){
 
-    auto start = std::chrono::high_resolution_clock::now();
     #if DO_BL_GRADIENT
     Real outputs[16] ; // 12 if doing all gradients CL CD and BL states for both surfaces
     #elif DO_SOUND
@@ -72,9 +70,6 @@ bool runCode(
 
     Real alpha = (alphad/180)*M_PI;
     
-    const Real rhoInf = 1.225;
-    const Real dynViscInf = 1.789e-5 ;
-    
     Real minX = 0.5, maxX = 0.01;
     for (int i=0;i<Nin;++i){
         Real newMin = std::min(minX,inXcoords[i]);
@@ -84,9 +79,9 @@ bool runCode(
     }
     Real chordScale = maxX - minX ;
     
-    
     Oper oper(alpha,Re,Ma);
-    
+    oper.rho = rhoInf;
+
     
     if (!useCustUinf){
         Uinf = (Re*dynViscInf)/(oper.rho*chordScale) ; // for scaling the BL outputs later
@@ -158,7 +153,6 @@ bool runCode(
     Foil foil(flattenedCoords);
     Isol isol;
     Param param;
-    param.breakLoop = breakLoop;
     param.ncrit = nCrit;
     Wake wake;
     Vsol vsol;
@@ -177,49 +171,47 @@ bool runCode(
 
     #ifdef USE_CODIPACK
     
-    //init_boundary_layer(oper,foil,param,isol,vsol,glob);
-    for (int i=0;i<RVdimension;++i){
-        glob.U[i] = statesInit[i];    
-    }
+        //init_boundary_layer(oper,foil,param,isol,vsol,glob);
+        for (int i=0;i<RVdimension;++i){
+            glob.U[i] = statesInit[i];    
+        }
 
-    for (int i=0;i<(Ncoords+Nwake);++i){vsol.turb[i] = turbInit[i];}
+        for (int i=0;i<(Ncoords+Nwake);++i){vsol.turb[i] = turbInit[i];}
     
     
     #else
-    // Standard run, dealing with restart or not
-    if (restart){
+        // Standard run, dealing with restart or not
+        if (restart){
 
-        std::ifstream prevfile("restart.json");
-        if (!prevfile) {
-            std::cerr << "Failed to open restart.json\n";
-            return 1;
+            std::ifstream prevfile("restart.json");
+            if (!prevfile) {
+                std::cerr << "Failed to open restart.json\n";
+                return 1;
+            }
+
+            // Parse the JSON
+            json j;
+            prevfile >> j;
+
+            for (int i=0;i<RVdimension;++i){glob.U[i] = j["states"][i];}
+            for (int i=0;i<(Ncoords+Nwake);++i){vsol.turb[i] = j["turb"][i];}
+            
+            if (force){
+                tdata.isForced[0]  = 1;
+                tdata.isForced[1]  = 1;
+            }
         }
-
-        // Parse the JSON
-        json j;
-        prevfile >> j;
-
-        for (int i=0;i<RVdimension;++i){glob.U[i] = j["states"][i];}
-        for (int i=0;i<(Ncoords+Nwake);++i){vsol.turb[i] = j["turb"][i];}
-        
-        if (force){
-            tdata.isForced[0]  = 1;
-            tdata.isForced[1]  = 1;
+        else if (xfoilStart){
+            init_boundary_layer_from_xfoil(oper,foil,param,isol,vsol,glob);
         }
-    }
-    
-    else if (xfoilStart){
-        init_boundary_layer_from_xfoil(oper,foil,param,isol,vsol,glob);
-    }
-    
-    else {
-        init_boundary_layer(oper,foil,param,isol,vsol,glob,tdata,force,topNcrit,botNcrit);
-    }
+        else {
+            init_boundary_layer(oper,foil,param,isol,vsol,glob,tdata,force);
+        }
     #endif
 
     stagpoint_move(isol,glob,foil,wake,vsol);
 
-    bool converged = solve_coupled(oper,foil,wake,param,vsol,isol,glob,tdata,force,topNcrit,botNcrit);
+    bool converged = solve_coupled(oper,foil,wake,param,vsol,isol,glob,tdata,force);
 
     Post post;
     calc_force(oper,geom,param,isol,foil,glob,post);
@@ -268,12 +260,6 @@ bool runCode(
     Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps,Roz);
     #endif
 
-    auto end = std::chrono::high_resolution_clock::now();
-
-    // Duration in milliseconds (or other units)
-    std::chrono::duration<double, std::milli> duration = end - start;
-
-    std::cout << "Elapsed time: " << duration.count() << " ms\n";
 
     #if DO_SOUND
     //std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
@@ -521,10 +507,12 @@ int main(){
     }
    
 
-    // Read scalar values
+    // Read input variables
     Real targetAlphaDeg = j["alpha_degrees"].get<double>();
     Real Re = j["Re"].get<double>();
     Real Ma = j["Ma"].get<double>();
+    Real rhoInf = j["rho"].get<double>();
+    Real nuInf = j["nu"].get<double>();
 
     int doRestart = j["restart"].get<int>();
     int doXfoilStart = j["xfoilstart"].get<int>();
@@ -541,15 +529,11 @@ int main(){
     const Real Ufac = j["Ufac"].get<double>();
     const Real TEfac = j["TEfac"].get<double>();
 
-    // forcing transition
+    // forcing transition variables
     const bool force = j["forcetrans"].get<int>();
     const Real topTransPos = j["toptrans"].get<double>();
     const Real botTransPos = j["bottrans"].get<double>();
     
-    const Real topNcrit = j["topncrit"].get<double>();
-    const Real botNcrit = j["botncrit"].get<double>();
-
-    const int breakLoop = j["breakloop"].get<int>();
     const int Roz = j["userozenburg"].get<int>();
 
     Real initStates[RVdimension] = {0};
@@ -569,15 +553,11 @@ int main(){
 
     for (int i=0;i<RVdimension;++i){initStates[i] = jfile["states"][i];}
     for (int i=0;i<(Ncoords+Nwake);++i){initTurb[i] = jfile["turb"][i];}
-
-    
-    
     #endif
     
-
-    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,topNcrit,botNcrit,breakLoop,Roz);
+    bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,rhoInf,nuInf,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,
+        useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,Roz);
     
-    std::cout << "converged: " << converged << std::endl ;
     return converged;
     
 };

@@ -177,7 +177,7 @@ void wake_init(const Vsol& vsol, const Foil& foil, const Glob& glob, const Param
 
 
 
-void init_boundary_layer(const Oper&oper, const Foil&foil, Param&param, Isol&isol, Vsol&vsol, Glob&glob, Trans&tdata, const bool force, const Real topNcrit, const Real botNcrit) {
+void init_boundary_layer(const Oper&oper, const Foil&foil, Param&param, Isol&isol, Vsol&vsol, Glob&glob, Trans&tdata, const bool force) {
     
     constexpr int Nsys = Ncoords + Nwake;
     const Real Hmaxl = 3.8;
@@ -187,14 +187,6 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, Param&param, Isol&iso
     get_ueinv(isol,ue);  // get inviscid edge velocity
 
     for (int surf = 0; surf < 3; ++surf) {
-
-
-        if (surf != 1){
-            param.ncrit = botNcrit;
-        }
-        else{
-            param.ncrit = topNcrit;
-        }
 
         const std::vector<int> indexList = vsol.Is[surf] ;
         int N = indexList.size(); // How many nodes are on this surface
@@ -306,6 +298,11 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, Param&param, Isol&iso
             // create initial guess using previsous state + current node edge velocity
             Real currState[4] = {prevState[0],prevState[1],prevState[2],ue[currNode]} ;
 
+            // If forcing transition, and on node before tran location, switch to solving transition over the panel
+            if ((!turb && !tran && force) && prevNode == tdata.transNode[surf]){
+                tran = true;
+                tdata.isForced[surf] = 1;
+            }
 
             if (tran) {
                 Real ct, ct_U[4]={0};
@@ -331,8 +328,12 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, Param&param, Isol&iso
                     Real yt = y1 + ((tdata.transPos[surf] - x1) / (x2 - x1)) * (y2 - y1);
                     
                     Real distFromStagTrans =  isol.distFromStag[prevNode] + std::sqrt((tdata.transPos[surf]-x1)*(tdata.transPos[surf]-x1)  + (yt-y1)*(yt-y1));
-
-                    residual_transition(prevState,currState,isol.distFromStag[prevNode],isol.distFromStag[currNode],0,0,param,tdata.isForced[surf],distFromStagTrans,R,R_U,R_x);
+                    if (!tdata.isForced[surf]){
+                        residual_transition(prevState,currState,isol.distFromStag[prevNode],isol.distFromStag[currNode],0.0,0.0,param,R,R_U,R_x);
+                    }
+                    else{
+                        residual_transition_forced(prevState,currState,isol.distFromStag[prevNode],isol.distFromStag[currNode],param,distFromStagTrans,R,R_U,R_x);
+                    }
                 } 
                 else {
     
@@ -389,9 +390,9 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, Param&param, Isol&iso
                     Real Ui_test2 = currState[2] + omega * dU[2];
 
                     // If U[2] would become too small or negative, scale omega
-                    if (Ui_test2 < 0.001) {
-                        omega = (0.001 - currState[2]) / dU[2];
-                        omega = std::max(omega, 1e-4); // prevent divide-by-zero or too small
+                    if (Ui_test2 < 0.00001) {
+                        omega = (0.00001 - currState[2]) / dU[2];
+                        omega = std::max(omega, 1e-6); // prevent divide-by-zero or too small
                     }
                 }
 
@@ -459,11 +460,11 @@ void init_boundary_layer(const Oper&oper, const Foil&foil, Param&param, Isol&iso
                 continue ; // amplification exceeds ncrit, redo node position with trans= true
             }
 
-            if ((!turb && !tran && force) && (prevNode==tdata.transNode[surf])){
-                tran = true;
-                tdata.isForced[surf] = 1;  // using the forced approach, changes the residual calc buy fixing x trans
-                continue ;
-            }
+            //if ((!turb && !tran && force) && (prevNode==tdata.transNode[surf])){
+            //    tran = true;
+            //    tdata.isForced[surf] = 1;  // using the forced approach, changes the residual calc buy fixing x trans
+            //    continue ;
+            //}
 
             if (tran){turb = true; tran=false;} // after tranistion, all nodes are turbulent
             
@@ -579,7 +580,7 @@ void init_boundary_layer_from_xfoil(const Oper&oper, const Foil&foil, const Para
             
             if (tran) {
                 
-                residual_transition(prevState,currState,isol.distFromStag[prevNode],isol.distFromStag[currNode],0,0,param,0,0.0,R,R_U,R_x);
+                residual_transition(prevState,currState,isol.distFromStag[prevNode],isol.distFromStag[currNode],0.0,0.0,param,R,R_U,R_x);
             } 
             else {
 
