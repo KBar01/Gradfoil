@@ -18,9 +18,9 @@
 #endif
 
 #define IDX(i,j,nrow) ((i)+(j)*(nrow)) // For col-major access
-#define Nwake 30
-#define RVdimension 920
-#define Ncoords 200
+#define Nwake 34
+#define RVdimension 1096
+#define Ncoords 240
 #define Nfine 501
 #define Nin 301
 #define Nsound 500
