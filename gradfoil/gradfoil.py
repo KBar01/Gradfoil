@@ -180,7 +180,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
             return success
         else:
             count = 1 
-            for uf, tef in [(3.5, 0.05), (4.0,0.05), (3.0,0.1), (2.5,0.7), (1.0,0.1), (1.0,0.05)]:
+            for uf, tef in [(2.5, 1.0), (3.0,1.0), (3.5,1.0), (0.5,1.0), (0.4,1.0), (1.0,1.0)]:
                 
                 print('trying different panel distribution ('+str(count)+'/6)')
                 success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef,toptrans,bottrans,forcetrans,useRoz,rho,nu)

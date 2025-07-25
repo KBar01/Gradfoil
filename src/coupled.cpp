@@ -71,7 +71,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
     constexpr int Rsize = 3*(Ncoords + Nwake);
     constexpr int Rallsize = 4*(Ncoords + Nwake);
 
-    for (int i = 0; i < 50; ++i) {
+    for (int i = 0; i < 70; ++i) {
         
         build_glob_RV(foil, vsol, isol, glob, param,tdata);
         
