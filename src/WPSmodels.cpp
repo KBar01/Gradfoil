@@ -2,8 +2,42 @@
 #include "real_type.h"
 
 
+
+
+// Solve for wake parameter Pi from Eq. (8) in Rozenberg et al. (2012)
+Real solveWakeParameter(Real Ue, Real utau, Real delta, Real nu, Real betaC) {
+    
+    // Initial guess 
+    Real Pi = 0.8* std::pow(betaC + 0.5,0.75);
+    // RHS of Eq. (8)
+    Real RHS = 0.41*(Ue/utau) - std::log((delta * Ue) / nu) - (5.1*0.41) - std::log(0.41);
+
+    int conv = 0;
+    for (int iter = 0; iter < 30; ++iter) {
+        // R(Pi) = 2*Pi - ln(1+Pi) - RHS
+        Real f = 2.0*Pi - std::log(1.0 + Pi) - RHS;
+
+        // R'(Pi) = 2 - 1/(1+Pi)
+        Real df = 2.0 - 1.0/(1.0 + Pi);
+
+        Real newPi = Pi - f/df;
+
+        if (std::fabs(newPi - Pi) < 1e-7) {
+            conv = 1;
+            return newPi;
+        }
+        Pi = newPi;
+    }
+
+    if (conv==0){
+        Pi = 0.8* std::pow(betaC + 0.5,0.75);
+        return Pi;
+    }
+}
+
+
 Real calc_S_qq_Amiet_rozenberg(const Real Ux,const Real omega,const Real rho,const Real tau_w,
-    const Real delta,const Real delta_star,const Real theta,const Real dpdx) {
+    const Real delta,const Real delta_star,const Real theta,const Real dpdx,const Real tau_max) {
     
     
     const Real nu = 1.51e-5;
@@ -13,17 +47,14 @@ Real calc_S_qq_Amiet_rozenberg(const Real Ux,const Real omega,const Real rho,con
 
     Real D = delta / delta_star;
 
-    // Table 1: beta_c clipped between 0.01 and 30.0
-    Real beta_c = std::max(std::min((theta / tau_w) * dpdx, 30.0), 0.01);
-
-    // Cf = tau_w / (0.5 * rho * Ux^2)
-    Real C_f = tau_w / (0.5 * rho * Ux * Ux);
+    // Table 1: beta_c
+    Real beta_c =(theta / tau_w) * dpdx;
 
     // Friction velocity
     Real u_tau = std::sqrt(tau_w / rho);
 
-    // Eq. 4
-    Real RT = (u_tau * (delta / nu)) * std::sqrt(C_f / 2.0);
+    //  under Eq. 4
+    Real RT = (delta*Ux) / (nu/(u_tau*u_tau));
 
     // Between Eq. 10 and 11
     Real A1 = 3.7 + 1.5 * beta_c;
@@ -36,10 +67,10 @@ Real calc_S_qq_Amiet_rozenberg(const Real Ux,const Real omega,const Real rho,con
     Real F1 = 4.76 * std::pow((1.4 / D), 0.75) * (0.375 * A1 - 1.0);
 
     // Eq. 13 (hard-coded PI value)
-    Real PI = 1.56;
+    Real PI = solveWakeParameter(Ux,u_tau,delta,nu,beta_c);
 
     // Eq. 12 - RHS
-    Real term1 = (2.82 * D * D) * std::pow((6.13 * std::pow(D, -0.75) + F1), A1);
+    Real term1 = (2.82 * D*D) * std::pow((6.13*std::pow(D, -0.75) + F1), A1);
     Real term2 = (4.2 * (PI / D) + 1.0) * (omega_bar * omega_bar);
     Real numerator = term1 * term2;
 
@@ -50,7 +81,7 @@ Real calc_S_qq_Amiet_rozenberg(const Real Ux,const Real omega,const Real rho,con
     Real RHS = numerator / denominator;
 
     // Eq. 12 - Phi_pp
-    Real Phi_pp = ((tau_w * tau_w) * delta_star / Ux) * RHS;
+    Real Phi_pp = ((tau_max*tau_max * delta_star) / Ux) * RHS;
 
     return Phi_pp;
 }

@@ -11,7 +11,7 @@
 using json = nlohmann::json;
 
 
-void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,const Real tau,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
+void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
 
     // start exp : 2 (100Hz)
     // final exp : 4.30103 (20,000 Hz)
@@ -21,7 +21,7 @@ void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,c
     
     
     for (int i=0;i<Nsound;++i){
-        phiqq[i] = calc_S_qq_Amiet_rozenberg(edgeVel,omega[i],oper.rho,tau,delta,deltaStar,theta,dpdx);
+        phiqq[i] = calc_S_qq_Amiet_rozenberg(edgeVel,omega[i],oper.rho,tauW,delta,deltaStar,theta,dpdx,tauMax);
     }
 
     for (int i=0;i<Nsound;++i){
@@ -96,7 +96,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     if (tauMax > 0.0){ 
     
         if (Roz){
-            calc_Spp_Rozenburg(theta,deltaS,delta,tauWall,edgeVel,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
+            calc_Spp_Rozenburg(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
         }
         else{
             calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
@@ -112,7 +112,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
 
     if (tauMax > 0.0){ 
         if (Roz){
-                calc_Spp_Rozenburg(theta,deltaS,delta,tauWall,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
+                calc_Spp_Rozenburg(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
             }
             else{
                 calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);

@@ -5,7 +5,7 @@
 
 
 Real calc_S_qq_Amiet_rozenberg(const Real Ux,const Real omega,const Real rho,const Real tau_w,
-    const Real delta,const Real delta_star,const Real theta,const Real dpdx);
+    const Real delta,const Real delta_star,const Real theta,const Real dpdx,const Real tau_max);
 
 Real calc_S_qq_Amiet_goody(
     const Real Ux,         // Freestream velocity [m/s]
