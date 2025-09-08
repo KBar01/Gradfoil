@@ -30,6 +30,28 @@ void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,c
     }
 }
 
+void calc_Spp_Karuzmann(const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
+
+    // start exp : 2 (100Hz)
+    // final exp : 4.30103 (20,000 Hz)
+
+
+    // loop over this with different omega vals
+    
+    
+    for (int i=0;i<Nsound;++i){
+        phiqq[i] = calc_WPS_karuzmann(edgeVel,omega[i],oper.rho,tauW,delta,deltaStar,theta,dpdx,tauMax);
+    }
+
+    for (int i=0;i<Nsound;++i){
+        Spp[i]  = calc_Spp_Freq(340, oper.rho, geom.chord, (Uinf/340), omega[i], X, Y, Z, S, phiqq[i], 0);
+        Spp[i] *= 4 * 2*M_PI;
+    }
+}
+
+
+
+
 void calc_Spp_Goody(const Real theta,const Real deltaStar,const Real delta,const Real tau,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf, const Real X,const Real Y,const Real Z, const Real S){
 
     // start exp : 2 (100Hz)
@@ -96,7 +118,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     if (tauMax > 0.0){ 
     
         if (Roz){
-            calc_Spp_Rozenburg(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
+            calc_Spp_Karuzmann(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
         }
         else{
             calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
@@ -112,7 +134,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
 
     if (tauMax > 0.0){ 
         if (Roz){
-                calc_Spp_Rozenburg(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
+                calc_Spp_Karuzmann(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
             }
             else{
                 calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
@@ -136,7 +158,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     Real OASPL = 10.0 * std::log10(integral / pref2);
     #ifndef USE_CODIPACK
     if (doCps){
-        
+    
         json amiet;
         amiet["freq"] = Freq;
         amiet["phiqqupper"] = phiqqUpper;

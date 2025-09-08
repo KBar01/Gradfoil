@@ -18,6 +18,9 @@ Real calc_S_qq_Amiet_goody(
     const Real dpdx        // Pressure gradient [Pa/m] (not used)
 );
 
+Real calc_WPS_karuzmann(const Real Ux,const Real omega,const Real rho,const Real tau_w,
+    const Real delta,const Real delta_star,const Real theta,const Real dpdx,const Real tau_max);
+
 void calc_S_qq_Amiet_TNO(const Real (&omega)[Nsound],const Real Ue, const Real Uinf, const Real rho,const Real tau_w,
     const Real delta,const Real delta_star,const Real theta,const Real dpdx, Real (&phi)[Nsound]);
 

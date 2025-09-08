@@ -86,6 +86,47 @@ Real calc_S_qq_Amiet_rozenberg(const Real Ux,const Real omega,const Real rho,con
     return Phi_pp;
 }
 
+Real calc_WPS_karuzmann(const Real Ux,const Real omega,const Real rho,const Real tau_w,
+    const Real delta,const Real delta_star,const Real theta,const Real dpdx,const Real tau_max) {
+    
+    const Real nu = 1.51e-5;
+
+    Real omega_bar = (omega * delta_star) / Ux;
+
+
+    // Eq 4 
+    Real H = delta_star / omega ; 
+    Real Cf = tau_w / (0.5 * rho * Ux*Ux);
+    Real lambda = std::sqrt((2.0/Cf)) ;
+    Real G = ((H-1)*lambda) / H ;
+    Real betaC = (G/6.1)*(G/6.1) - 1.81 ;
+
+    // Eq 3 
+    Real wakeParam = 0.227;
+    if (betaC > -0.5){
+        wakeParam = 0.8 * std::pow(betaC+0.5, 0.75) ;
+    }
+
+    // Eq 5
+    Real m = 0.5*std::pow(H/1.31, 0.3);
+    Real B2 = 0.45*(1.75*std::pow(wakeParam*wakeParam*betaC*betaC, m) + 15.0) ;
+
+    // Eq 6
+    Real p = 1.637;
+    Real q = 2.47;
+    Real B1 = 0.27;
+    Real uTau = std::sqrt(tau_w/rho);
+    Real RT = (delta_star*uTau*uTau) / (Ux*nu) ; 
+    Real r = 2.0/7.0 ;
+    Real B3 = std::pow(1.15*RT, -r);
+
+    Real RHS = (B2 * (omega_bar*omega_bar)) / (std::pow(std::pow(omega_bar, p)+B1 , q) + std::pow(B3*omega_bar, 7));
+
+    Real Phi_pp = RHS * (tau_w*tau_w*delta_star) / Ux ; 
+
+    return Phi_pp;
+}
+
 
 
 Real TNO_velocity_profile(
