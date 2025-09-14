@@ -64,6 +64,7 @@ void solve_sys(Glob& glob) {
 
 #else
 
+/*
 template<typename T>
 using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 template<typename T>
@@ -112,6 +113,162 @@ void solve_sys(Glob&glob){
     for (int i=0;i<Nsize;++i){
         glob.dU[i] = -sol(i);
     }
+}
+*/
+
+//#ifdef USE_CODIPACK
+
+// === Drop-in sparse solver with full custom gradients for Codipack ===
+// Place inside the #else branch where you currently have the dense QR solve.
+// Requires Eigen (SparseLU) and Codipack headers already included.
+
+
+
+
+#include <vector>
+#include <iostream>
+#include <cassert>
+
+// keep your colMajorIndex helper
+inline int colMajorIndex(int i, int j, int n) { return i + j * n; }
+
+// The main function to replace the current codi branch solve_sys.
+// It builds the sparse matrix from glob.R_V (reading numerical values from Real),
+// factorizes, solves, computes the local Jacobian (A^{-1} and A^{-1} * rhs),
+// and registers the per-output derivatives with Codipack.
+void solve_sys(Glob &glob) {
+
+    // sizes
+    constexpr int Nsys = Ncoords + Nwake;
+    const int Nsize = 4 * Nsys;
+
+    // Helper to extract a plain double value from Real (works for both AD and non-AD Real).
+    auto getValueDouble = [&](const Real &r) -> double {
+    #ifdef USE_CODIPACK
+        // In AD build Real is a Codipack type that exposes getValue()
+        return r.getValue();
+    #else
+        return static_cast<double>(r);
+    #endif
+    };
+
+    // 1) Build sparse matrix A from glob.R_V using triplets (only nonzeros)
+    std::vector<Eigen::Triplet<double>> triplets;
+    triplets.reserve(4096); // adjust heuristic if you can estimate nnz
+
+    for (int col = 0; col < Nsize; ++col) {
+        for (int row = 0; row < Nsize; ++row) {
+            int flat = colMajorIndex(row, col, Nsize);
+            double val = getValueDouble(glob.R_V[flat]);
+            if (val != 0.0) {
+                triplets.emplace_back(row, col, val);
+            }
+        }
+    }
+
+    Eigen::SparseMatrix<double> A_sparse(Nsize, Nsize);
+    A_sparse.setFromTriplets(triplets.begin(), triplets.end());
+
+    // 2) Build rhs vector (double)
+    Eigen::VectorXd rhs(Nsize);
+    for (int i = 0; i < Nsize; ++i) rhs(i) = getValueDouble(glob.R[i]);
+
+    // 3) Factorize once with SparseLU (reuse for multiple solves)
+    Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+    solver.analyzePattern(A_sparse);
+    solver.factorize(A_sparse);
+    if (solver.info() != Eigen::Success) {
+        std::cerr << "Sparse factorization failed (forward)!\n";
+        // You may want to set glob.dU to zero or handle error gracefully.
+        for (int i = 0; i < Nsize; ++i) glob.dU[i] = (Real)0.0;
+        return;
+    }
+
+    // 4) Solve y = A^{-1} * rhs
+    Eigen::VectorXd y = solver.solve(rhs);
+    if (solver.info() != Eigen::Success) {
+        std::cerr << "Sparse solve failed (forward)!\n";
+        for (int i = 0; i < Nsize; ++i) glob.dU[i] = (Real)0.0;
+        return;
+    }
+
+    // 5) Compute solution x = -y and write into glob.dU (as Real)
+    Eigen::VectorXd x = -y;
+    for (int i = 0; i < Nsize; ++i) {
+        glob.dU[i] = (Real)x(i); // constructs AD variable when in AD build
+    }
+
+    // ------------------------------
+    // 6) Compute A^{-1} to build local Jacobian entries:
+    //    we need Ainv = A^{-1} so we can compute:
+    //      ∂x_i/∂b_j = - (A^{-1})_{i,j}
+    //      ∂x_i/∂A_{p,q} = (A^{-1})_{i,p} * y_q
+    //    We compute Ainv by solving A * E = I (multiple RHS) using the same factorization.
+    // ------------------------------
+
+    // Build identity matrix as dense double (Nsize x Nsize) and solve in one call
+    Eigen::MatrixXd I = Eigen::MatrixXd::Identity(Nsize, Nsize);
+    Eigen::MatrixXd Ainv = solver.solve(I);
+    if (solver.info() != Eigen::Success) {
+        std::cerr << "Solve for Ainv failed!\n";
+        // fallback: we could compute columns one-by-one, but we stop here for clarity
+        for (int i = 0; i < Nsize; ++i) {
+            glob.dU[i] = (Real)0.0;
+        }
+        return;
+    }
+
+    // ------------------------------
+    // 7) Register per-output local derivatives with Codipack using StatementPushHelper.
+    //    For each output i (glob.dU[i]) we push:
+    //      - each b_j with derivative = ∂x_i/∂b_j = - Ainv(i,j)
+    //      - each *nonzero* A_{p,q} (matching glob.R_V layout) with derivative = Ainv(i,p) * y(q)
+    //    This gives Codipack exactly the Jacobian needed at this linear solve node.
+    // ------------------------------
+
+    // To speed up the inner loops we cache the nonzero triplet info we already extracted.
+    // Build arrays of nz rows/cols/flat indices for fast iteration
+    std::vector<int> nz_rows; nz_rows.reserve(triplets.size());
+    std::vector<int> nz_cols; nz_cols.reserve(triplets.size());
+    std::vector<int> nz_flat; nz_flat.reserve(triplets.size());
+    for (const auto &t : triplets) {
+        nz_rows.push_back((int)t.row());
+        nz_cols.push_back((int)t.col());
+        nz_flat.push_back(colMajorIndex((int)t.row(), (int)t.col(), Nsize));
+    }
+
+    // For each output i create a statement and push all input arguments with the correct scalar partials
+    // IMPORTANT: StatementPushHelper must use the Codipack reverse real type
+    for (int i = 0; i < Nsize; ++i) {
+
+        // Create a push helper for this output
+        codi::StatementPushHelper<codi::RealReverse> ph;
+        ph.startPushStatement();
+
+        // 7a) push each RHS element: glob.R[j] with derivative -Ainv(i,j)
+        for (int j = 0; j < Nsize; ++j) {
+            double deriv_b = - Ainv(i, j);          // ∂x_i / ∂b_j
+            ph.pushArgument(glob.R[j], deriv_b);
+        }
+
+        // 7b) push each nonzero A element from glob.R_V:
+        // derivative = ∂x_i / ∂A_{p,q} = Ainv(i,p) * y(q)
+        for (size_t k = 0; k < nz_rows.size(); ++k) {
+            int p = nz_rows[k];   // row index
+            int q = nz_cols[k];   // col index
+            int flat = nz_flat[k]; // flattened index into glob.R_V
+            double deriv_A = Ainv(i, p) * y(q);    // Ainv(i,p) * y_q
+            ph.pushArgument(glob.R_V[flat], deriv_A);
+        }
+
+        // 7c) finish the statement for output glob.dU[i]
+        // supply the current (double) value of x(i) so Codipack records it.
+        ph.endPushStatement(glob.dU[i], x(i));
+    }
+
+    // Done. The AD tape now has a single "atomic" statement per output x_i where the local Jacobian
+    // entries are exact numeric values computed above. Codipack will use those numbers during reverse,
+    // so we avoided tracing the dense factorization internals.
 }
 
 #endif

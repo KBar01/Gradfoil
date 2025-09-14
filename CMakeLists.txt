@@ -132,47 +132,49 @@ endif()
 
 
 ############## Main AD CODE, retuns CL,CD unless BL_GRADIENT=ON, return BL states grads ##########
-list(REMOVE_ITEM SOURCES
- "${CMAKE_SOURCE_DIR}/src/amiet.cpp"
- "${CMAKE_SOURCE_DIR}/src/error_package.cpp"
- "${CMAKE_SOURCE_DIR}/src/fresenel.cpp"
- "${CMAKE_SOURCE_DIR}/src/sound.cpp"
- "${CMAKE_SOURCE_DIR}/src/WPSmodels.cpp")
 
-if (DO_SOUND)
-  
-  add_executable(CFoil_AD src/main.cpp ${SOURCES})
-  
-  target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
 
-  target_include_directories(CFoil_AD PRIVATE
-    ${COMMON_INCLUDES}
-    ${codipack_SOURCE_DIR}/include
-  )
+#list(REMOVE_ITEM SOURCES
+# "${CMAKE_SOURCE_DIR}/src/amiet.cpp"
+# "${CMAKE_SOURCE_DIR}/src/error_package.cpp"
+# "${CMAKE_SOURCE_DIR}/src/fresenel.cpp"
+# "${CMAKE_SOURCE_DIR}/src/sound.cpp"
+# "${CMAKE_SOURCE_DIR}/src/WPSmodels.cpp")
 
-  target_compile_definitions(CFoil_AD PRIVATE
-    -DUSE_CODIPACK
-    -DCODI_EnableEigen 
-    -DCODI_ForcedInlines
-    -DDO_BL_GRADIENT=0
-    -DDO_SOUND=0
-  )
-else()
-  
-  add_executable(CFoil_AD src/main.cpp ${SOURCES})
-  
-  target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
+#if (DO_SOUND)
+#  
+#  add_executable(CFoil_AD src/main.cpp ${SOURCES})
+#  
+#  target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
+#
+#  target_include_directories(CFoil_AD PRIVATE
+#    ${COMMON_INCLUDES}
+#    ${codipack_SOURCE_DIR}/include
+#  )#
+#
+#  target_compile_definitions(CFoil_AD PRIVATE
+#    -DUSE_CODIPACK
+#    -DCODI_EnableEigen 
+#    -DCODI_ForcedInlines
+#    -DDO_BL_GRADIENT=0
+#    -DDO_SOUND=0
+#  )
+#else()
+#  
+#  add_executable(CFoil_AD src/main.cpp ${SOURCES})
+#  
+#  target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)##
+#
+#  target_include_directories(CFoil_AD PRIVATE
+#    ${COMMON_INCLUDES}
+#    ${codipack_SOURCE_DIR}/include
+#  )#
 
-  target_include_directories(CFoil_AD PRIVATE
-    ${COMMON_INCLUDES}
-    ${codipack_SOURCE_DIR}/include
-  )
-
-  target_compile_definitions(CFoil_AD PRIVATE
-    -DUSE_CODIPACK
-    -DCODI_EnableEigen 
-    -DCODI_ForcedInlines
-    -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
-    -DDO_SOUND=0
-  )
-endif()
+#  target_compile_definitions(CFoil_AD PRIVATE
+#    -DUSE_CODIPACK
+#    -DCODI_EnableEigen 
+#    -DCODI_ForcedInlines
+#    -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
+#    -DDO_SOUND=0
+#  )
+#endif()
