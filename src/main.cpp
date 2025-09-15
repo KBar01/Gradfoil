@@ -48,7 +48,7 @@ bool runCode(
     #if DO_BL_GRADIENT
     Real outputs[16] ; // 12 if doing all gradients CL CD and BL states for both surfaces
     #elif DO_SOUND
-    Real outputs;
+    Real outputs[3];
     #else
     Real outputs[2] ; // only doing CL and CD gradients  (and fwd output)
     #endif
@@ -63,8 +63,8 @@ bool runCode(
             tape.registerInput(inYcoords[i]);
         }
         tape.registerInput(alphad);
-        tape.registerInput(Re);
-        tape.registerInput(Ma);
+        //tape.registerInput(Re);
+        //tape.registerInput(Ma);
     #endif
     //---------------------------- run calculation ----------------------------------------------------
 
@@ -262,8 +262,8 @@ bool runCode(
 
 
     #if DO_SOUND
-    //std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
-    std::vector<std::string> outputNames = {"OASPL"};
+    std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
+    //std::vector<std::string> outputNames = {"OASPL"};
     #else
     std::vector<std::string> outputNames = {"CL", "CD",
         "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
@@ -389,42 +389,28 @@ bool runCode(
             outputs[2+7+i] = botsurf[i];
         }
         #elif DO_SOUND
-        constexpr int jacobianHeight = 1;
-        outputs = OASPL;
+        constexpr int jacobianHeight = 3;
+        outputs[0] = post.cl;
+        outputs[1] = post.cd;
+        outputs[2] = OASPL;
         #else
         constexpr int jacobianHeight = 2;
         outputs[0] = post.cl;
         outputs[1] = post.cd;
         #endif
 
-        #if DO_SOUND
-        tape.registerOutput(outputs);
-        tape.setPassive();
-        outputs.gradient() = 1.0 ;
-        #else
         for (int i=0;i<jacobianHeight;++i){
             tape.registerOutput(outputs[i]);
         }
         tape.setPassive();
         for (int i=0;i<jacobianHeight;++i){outputs[i].gradient()[i] = 1.0 ;}
-        #endif
         
         tape.evaluate();
 
         codi::Jacobian<double> jacobian(jacobianHeight,Nin);
         codi::Jacobian<double> jacobianAlpha(jacobianHeight,1);
-        codi::Jacobian<double> jacobianRe(jacobianHeight,1);
-        codi::Jacobian<double> jacobianMa(jacobianHeight,1);
+
         
-        #if DO_SOUND
-        std::vector<std::vector<double>> allGradients ;
-        for (int i = 0; i < Nin; ++i) {    
-            jacobian(0,i) = inYcoords[i].getGradient();
-        }
-        jacobianAlpha(0,0) = alphad.getGradient();
-        jacobianRe(0,0)    = Re.getGradient();
-        jacobianMa(0,0)    = Ma.getGradient();
-        #else
         std::vector<std::vector<double>> allGradients ;
         for (int i = 0; i < Nin; ++i) {   
             for (int n=0;n<jacobianHeight;++n){
@@ -433,18 +419,13 @@ bool runCode(
         }
         for (int n=0;n<jacobianHeight;++n){
             jacobianAlpha(n,0) = alphad.getGradient()[n];
-            jacobianRe(n,0)    = Re.getGradient()[n];
-            jacobianMa(n,0)    = Ma.getGradient()[n];
         }
-        #endif
         
-
-
         // Fill allGradients
         for (int out = 0; out < jacobianHeight; ++out) {
             std::vector<double> grad;
             for (int i = 0; i < Nin; ++i) {
-                grad.push_back(jacobian(out, i));  // or however you compute the gradient
+                grad.push_back(jacobian(out, i));
             }
             allGradients.push_back(grad);
         }
@@ -455,18 +436,13 @@ bool runCode(
         }
         
         std::vector<double> allGradientsAlf ;
-        std::vector<double> allGradientsRe ;
-        std::vector<double> allGradientsMa ;
+
         for (int out = 0; out<jacobianHeight; ++out) {
             allGradientsAlf.push_back(jacobianAlpha(out, 0));
-            allGradientsRe.push_back(jacobianRe(out, 0));
-            allGradientsMa.push_back(jacobianMa(out, 0));
         }
         
         for (int i = 0; i < allGradientsAlf.size(); ++i) {
             j["d " + outputNames[i] + " / d alpha"] = allGradientsAlf[i];
-            j["d " + outputNames[i] + " / d Re"] = allGradientsRe[i];
-            j["d " + outputNames[i] + " / d Ma"] = allGradientsMa[i];
         }
         
         #if DO_SOUND

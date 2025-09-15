@@ -50,7 +50,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
      
         update_transition(glob, vsol, isol, param, tdata, force);
 
-        build_glob_RV(foil, vsol, isol, glob, param,tdata);
+        build_glob_RV(foil, vsol, isol, glob, param,tdata);  // maybe can remove ????
 
         Real residualNorm = euc_norm(glob.R, Rsize);
 

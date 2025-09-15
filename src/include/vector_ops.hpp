@@ -184,5 +184,4 @@ void mul_inplace(Real* a, const Real* b) {
 }
 
 
-
 }  // namespace vecops

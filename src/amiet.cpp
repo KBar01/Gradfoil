@@ -146,7 +146,7 @@ void seper_calc_lift(Real kx,Real ks,Real kc,Real C,Real MX,Real beta,Real mu, R
     double dv_dy = dw_dz.real();        // ∂Im(w)/∂y
     
     // Push statement for u = Re(w)
-    codi::StatementPushHelper<codi::RealReverse> ph;
+    codi::StatementPushHelper<Real> ph;
     ph.startPushStatement();
     ph.pushArgument(erf1InputR, du_dx);
     ph.pushArgument(erf1InputI, du_dy);
@@ -155,7 +155,7 @@ void seper_calc_lift(Real kx,Real ks,Real kc,Real C,Real MX,Real beta,Real mu, R
 
     // Push statement for v = Im(w)
 
-    codi::StatementPushHelper<codi::RealReverse> phIm;
+    codi::StatementPushHelper<Real> phIm;
     phIm.startPushStatement();
     phIm.pushArgument(erf1InputR, dv_dx);
     phIm.pushArgument(erf1InputI, dv_dy);
@@ -193,7 +193,7 @@ void seper_calc_lift(Real kx,Real ks,Real kc,Real C,Real MX,Real beta,Real mu, R
     dv_dy = dw2_dz2.real();        // ∂Im(w)/∂y
     
     // Push statement for u = Re(w)
-    codi::StatementPushHelper<codi::RealReverse> ph2;
+    codi::StatementPushHelper<Real> ph2;
     ph2.startPushStatement();
     ph2.pushArgument(erf2InputR, du_dx);
     ph2.pushArgument(erf2InputI, du_dy);
@@ -202,7 +202,7 @@ void seper_calc_lift(Real kx,Real ks,Real kc,Real C,Real MX,Real beta,Real mu, R
 
     // Push statement for v = Im(w)
 
-    codi::StatementPushHelper<codi::RealReverse> ph2Im;
+    codi::StatementPushHelper<Real> ph2Im;
     ph2Im.startPushStatement();
     ph2Im.pushArgument(erf2InputR, dv_dx);
     ph2Im.pushArgument(erf2InputI, dv_dy);
