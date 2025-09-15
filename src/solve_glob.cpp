@@ -28,17 +28,24 @@ using namespace std::chrono;
 void solve_sys(Glob& glob) {
     constexpr int Nsize = 4 * (Ncoords + Nwake);
 
-    //auto start_total = high_resolution_clock::now();
-    // Map the dense matrix from raw data
-    Eigen::Map<const Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>>
-        A_eigen(glob.R_V, Nsize, Nsize);
+    // === 1. Build triplets from glob arrays ===
+    std::vector<Eigen::Triplet<Real>> triplets;
+    triplets.reserve(glob.R_V_latest);
+    for (int k = 0; k < glob.R_V_latest; ++k) {
+        int row = glob.R_V_rows[k];
+        int col = glob.R_V_cols[k];
+        Real val = glob.R_V_vals[k];
+        if (val != Real(0)) {
+            triplets.emplace_back(row, col, val);
+        }
+    }
 
-    Eigen::Map<const Eigen::Matrix<Real, RVdimension, 1, Eigen::ColMajor>>
-        rhs_eigen(glob.R, Nsize, 1);
-
-    // Convert dense matrix to sparse matrix
+    // === 2. Fill sparse matrix from triplets ===
     Eigen::SparseMatrix<Real> A_sparse(Nsize, Nsize);
-    A_sparse = A_eigen.sparseView();  // Converts dense to sparse
+    A_sparse.setFromTriplets(triplets.begin(), triplets.end());
+    
+    Eigen::Map<const Eigen::Matrix<Real, RVdimension, 1, Eigen::ColMajor>>
+    rhs_eigen(glob.R, Nsize, 1);
 
     // Use SparseLU solver
     Eigen::SparseLU<Eigen::SparseMatrix<Real>> sparse_solver;
@@ -224,7 +231,12 @@ void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const 
 
         int colindex = 4*col + 3;
         for (int row = 0;row<Nsys;++row){
-            glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] = (row == col ? 1.0 : 0.0) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
+            
+            //glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] = (row == col ? 1.0 : 0.0) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
+            glob.R_V_vals[glob.R_V_latest] = (row == col ? 1.0 : 0.0) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
+            glob.R_V_rows[glob.R_V_latest] = rowStart+row;
+            glob.R_V_cols[glob.R_V_latest] = colindex;
+            glob.R_V_latest += 1 ;
         }
     }
 
@@ -233,7 +245,11 @@ void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const 
 
         int colindex = 4*col + 1;
         for (int row = 0;row<Nsys;++row){
-            glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] =  - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ue[col];
+            //glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] =  - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ue[col];
+            glob.R_V_vals[glob.R_V_latest] = - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ue[col];
+            glob.R_V_rows[glob.R_V_latest] = rowStart+row;
+            glob.R_V_cols[glob.R_V_latest] = colindex;
+            glob.R_V_latest += 1 ;
         }
     }
 

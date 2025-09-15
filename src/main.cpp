@@ -47,10 +47,8 @@ bool runCode(
 
     #if DO_BL_GRADIENT
     Real outputs[16] ; // 12 if doing all gradients CL CD and BL states for both surfaces
-    #elif DO_SOUND
-    Real outputs[3];
     #else
-    Real outputs[2] ; // only doing CL and CD gradients  (and fwd output)
+    Real outputs[3] ; // only doing CL and CD gradients  (and fwd output)
     #endif
 
     // ------------- Doing Adjoint, register relevant input to track gradients --------------------------
@@ -252,26 +250,12 @@ bool runCode(
 
     
     // if codipack, only use sound code if sound flag on. if not codipack run sound regardless
-    #ifdef USE_CODIPACK
-    #if DO_SOUND
-    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps,Roz);
-    #endif
-    #else
-    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps,Roz);
-    #endif
-
-
-    #if DO_SOUND
-    std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
-    //std::vector<std::string> outputNames = {"OASPL"};
-    #else
-    std::vector<std::string> outputNames = {"CL", "CD",
-        "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
-        "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"
-    };
-    #endif
     
-
+    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps,Roz);
+   
+   
+    std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
+    
     # ifndef USE_CODIPACK
     if (converged){
         json restart;
@@ -305,7 +289,7 @@ bool runCode(
         out[outputNames[13]] = botsurf[4];
         out[outputNames[14]] = botsurf[5];
         out[outputNames[15]] = botsurf[6];
-        #elif DO_SOUND
+        #else
         out["OASPL"] = OASPL;
         #endif
 
@@ -388,15 +372,11 @@ bool runCode(
             outputs[2+i] = topsurf[i];
             outputs[2+7+i] = botsurf[i];
         }
-        #elif DO_SOUND
+        #else
         constexpr int jacobianHeight = 3;
         outputs[0] = post.cl;
         outputs[1] = post.cd;
         outputs[2] = OASPL;
-        #else
-        constexpr int jacobianHeight = 2;
-        outputs[0] = post.cl;
-        outputs[1] = post.cd;
         #endif
 
         for (int i=0;i<jacobianHeight;++i){
@@ -445,11 +425,7 @@ bool runCode(
             j["d " + outputNames[i] + " / d alpha"] = allGradientsAlf[i];
         }
         
-        #if DO_SOUND
-        std::ofstream outFile("OASPL_gradients.json");
-        #else
         std::ofstream outFile("ad_gradients.json");
-        #endif
         outFile << j.dump(4);  // pretty-print with 4-space indentation
         outFile.close();
         

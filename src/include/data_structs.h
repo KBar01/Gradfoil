@@ -172,7 +172,10 @@ struct Glob {
     Real R[4*(Ncoords+Nwake)] = {0.0};                 // Residuals
     //std::vector<std::vector<Real>> R_U;  // Residual Jacobian w.r.t. primary states
     //Real R_x[3*(Ncoords+Nwake) * (Ncoords+Nwake)] = {0.0};  // Residual Jacobian w.r.t. xi (s-values)
-    Real R_V[4*(Ncoords+Nwake) * 4*(Ncoords+Nwake)] = {0.0}; // Global Jacobian
+    Real R_V_vals[119700] = {0.0}; // Global Jacobian vals (using 20% density)
+    int R_V_rows[119700] = {0}; // Global Jacobian vals (using 20% density)
+    int R_V_cols[119700] = {0}; // Global Jacobian vals (using 20% density)
+    int R_V_latest = 0 ;
 
     int convergenceIteration = 100 ;
 };

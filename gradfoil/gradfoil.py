@@ -61,7 +61,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
 
     print("Initial run failed. Starting backstepping ...")
     
-    max_back_steps = 8
+    max_back_steps = 5
     stepsize = 1.0
     small_step = 0.5
     back_converged = False
@@ -117,7 +117,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
     fwdalf = tempalf - (step_direction * stepsize)
     attemptCount = 0
     overallCount = 0
-    max_attempts = 8
+    max_attempts = 5
 
     while (not completed) and (overallCount <= max_attempts):
         
@@ -203,14 +203,9 @@ def xfoil_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,cus
 
     return success
 
-def grad_run(doSound=0):
+def grad_run():
     # Run the AD version of the code, using known solution from fwd run
-    if doSound:
-        result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
-        result = subprocess.run([EXEC_NOISE],cwd=os.getcwd(), capture_output=True, text=True)
-
-    else:
-        result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
+    result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
 
 
 
