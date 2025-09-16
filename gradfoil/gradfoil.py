@@ -117,7 +117,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
     fwdalf = tempalf - (step_direction * stepsize)
     attemptCount = 0
     overallCount = 0
-    max_attempts = 5
+    max_attempts = 6
 
     while (not completed) and (overallCount <= max_attempts):
         
@@ -151,7 +151,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
                 attemptCount = 0
         else:
             attemptCount += 1
-            if attemptCount > 6:
+            if attemptCount > 5:
                 print("Forward stepping failed repeatedly.")
                 break
 
