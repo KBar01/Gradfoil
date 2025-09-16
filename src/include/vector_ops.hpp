@@ -84,7 +84,8 @@ template<int M, int N, int P>
 void matmat_mul(const Real* A, const Real* B, Real* C) {
     for (int i = 0; i < M; ++i) {
         for (int j = 0; j < P; ++j) {
-            C[i + j*M] = Real(0);
+            Real zero = 0.0;
+            C[i + j*M] = zero;
             for (int k = 0; k < N; ++k) {
                 C[i + j*M] += A[i + k*M] * B[k + j*N];
             }

@@ -70,31 +70,6 @@ void solve_sys(Glob& glob) {
 }
 
 #else
-template<typename T>
-using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-template<typename T>
-using Vector = Eigen::Matrix<T, Eigen::Dynamic, 1>;
-
-template<typename Type>
-void func(Matrix<Type> const& A, Vector<Type> const& rhs, Vector<Type>& sol) {
-    
-    sol = A.colPivHouseholderQr().solve(rhs);
-}
- 
-template<typename Number>
-struct EigenSolver : public codi::EigenLinearSystem<Number, Matrix, Vector> {
-  public:
- 
-    using Base = codi::EigenLinearSystem<Number, Matrix, Vector>;  
-    using MatrixReal = typename Base::MatrixReal;                  
-    using VectorReal = typename Base::VectorReal;                  
- 
-    void solveSystem(MatrixReal const* A, VectorReal const* b, VectorReal* x) {
-        func(*A, *b, *x);
-    }
-};
-
-
 
 // === Drop-in sparse solver with full custom gradients for Codipack ===
 // Place inside the #else branch where you currently have the dense QR solve.
@@ -124,8 +99,7 @@ template<typename T>
 void sparseSolveFunc(MatrixSparse<T> const& A, Vector<T> const& rhs, Vector<T>& sol) {
     // choose your factorization; SparseLU works for general unsymmetric
     Eigen::SparseLU<MatrixSparse<T>> lu;
-    lu.analyzePattern(A);
-    lu.factorize(A);
+    lu.compute(A);
     sol = lu.solve(rhs);
 }
 
@@ -175,22 +149,21 @@ void solve_sys(Glob &glob) {
 
 #endif
 
-void writeArrayToCSV(const std::string& filename, const double* array, int size) {
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open file " << filename << " for writing.\n";
-        return;
-    }
+//void writeArrayToCSV(const std::string& filename, const double* array, int size) {
+//    std::ofstream file(filename);
+//    if (!file.is_open()) {
+//        std::cerr << "Error: Could not open file " << filename << " for writing.\n";
+//        return;
+//   }
 
-    for (int i = 0; i < size; ++i) {
-        file << array[i] << "\n";
-    }
+//    for (int i = 0; i < size; ++i) {
+//        file << array[i] << "\n";
+//    }
 
-    file.close();
-}
+//    file.close();
+//}
 
 
-#ifndef USE_CODIPACK
 void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const Oper& oper) {
     
     
@@ -233,74 +206,9 @@ void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const 
         for (int row = 0;row<Nsys;++row){
             
             //glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] = (row == col ? 1.0 : 0.0) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
-            glob.R_V_vals[glob.R_V_latest] = (row == col ? 1.0 : 0.0) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
-            glob.R_V_rows[glob.R_V_latest] = rowStart+row;
-            glob.R_V_cols[glob.R_V_latest] = colindex;
-            glob.R_V_latest += 1 ;
-        }
-    }
-
-    //all disp thickness indices
-    for (int col=0;col<Nsys;++col){
-
-        int colindex = 4*col + 1;
-        for (int row = 0;row<Nsys;++row){
-            //glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] =  - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ue[col];
-            glob.R_V_vals[glob.R_V_latest] = - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ue[col];
-            glob.R_V_rows[glob.R_V_latest] = rowStart+row;
-            glob.R_V_cols[glob.R_V_latest] = colindex;
-            glob.R_V_latest += 1 ;
-        }
-    }
-
-    solve_sys(glob);
-}
-
-
-#else
-void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const Oper& oper) {
-    
-    
-    constexpr int Nsys = Ncoords+Nwake;
-
-    // Step 1: Modify ue array to avoid 0 or negative
-    int nrows = 4; // Since U is shaped (4, Nsys) in column-major
-    Real ue[Nsys] = {0};
-    Real uemax = 0.0;
-    for (int i = 0; i < Nsys; ++i){
-        uemax = std::max(uemax, std::abs(glob.U[colMajorIndex(3,i,4)]));
-    }
-    for (int i = 0; i < Nsys; ++i){
-        ue[i] = std::max(glob.U[colMajorIndex(3,i,4)], 1e-10*uemax);
-    }
-
-    // Step 2: Get ueinv
-    Real ueinv[Nsys]={0};
-    get_ueinv(isol,ueinv);
-
-    // Step 3: Build Residual R
-    Real ds[Nsys];
-    for (int i = 0; i < Nsys; ++i) {ds[i] = glob.U[colMajorIndex(1, i, 4)];}
-
-    Real tempRHS[Nsys];
-    cnp::mul<Nsys>(ds,ue,tempRHS); // ds*ue
-
-    Real* Rpointer = &glob.R[3*Nsys] ; 
-    cnp::matmat_mul<Nsys,Nsys,1>(vsol.ue_m,tempRHS,Rpointer);
-
-    for (int i = 0; i < Nsys; ++i){
-        Rpointer[i] = ue[i] - (ueinv[i] + Rpointer[i]);
-    }
-
-    // all edge velocity indices
-    int rowStart = 3*Nsys;
-    for (int col=0;col<Nsys;++col){
-
-        int colindex = 4*col + 3;
-        for (int row = 0;row<Nsys;++row){
             
-            //glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] = (row == col ? 1.0 : 0.0) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
-            glob.R_V_vals[glob.R_V_latest] = (row == col ? 1.0 : 0.0) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
+            Real zero = 0.0;
+            glob.R_V_vals[glob.R_V_latest] = (row == col ? 1.0 : zero) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
             glob.R_V_rows[glob.R_V_latest] = rowStart+row;
             glob.R_V_cols[glob.R_V_latest] = colindex;
             glob.R_V_latest += 1 ;
@@ -323,5 +231,4 @@ void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const 
     solve_sys(glob);
 }
 
-#endif
 

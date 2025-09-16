@@ -61,8 +61,6 @@ bool runCode(
             tape.registerInput(inYcoords[i]);
         }
         tape.registerInput(alphad);
-        //tape.registerInput(Re);
-        //tape.registerInput(Ma);
     #endif
     //---------------------------- run calculation ----------------------------------------------------
 
