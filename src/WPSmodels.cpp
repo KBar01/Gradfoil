@@ -1,335 +1,393 @@
 #include <cmath>
 #include "real_type.h"
 
-
-
-
-// Solve for wake parameter Pi from Eq. (8) in Rozenberg et al. (2012)
-Real solveWakeParameter(Real Ue, Real utau, Real delta, Real nu, Real betaC) {
+void calc_WPS_Goody(Real theta,
+                    Real deltaS,
+                    Real delta,
+                    Real tauWall,
+                    Real tauMax,
+                    Real edgeVel,
+                    Real dpdx,
+                    const Real (&omega)[Nsound],
+                    Real rho,
+                    Real nu,
+                    Real Uinf,
+                    Real (&phiqq)[Nsound]){
     
-    // Initial guess 
-    Real Pi = 0.8* std::pow(betaC + 0.5,0.75);
-    // RHS of Eq. (8)
-    Real RHS = 0.41*(Ue/utau) - std::log((delta * Ue) / nu) - (5.1*0.41) - std::log(0.41);
+    Real a = 3;
+    Real b = 2;
+    Real c = 0.75;
+    Real d = 0.5;
+    Real e = 3.7;
+    Real f = 1.1;
+    Real g = -0.57;
+    Real h = 7;
+    Real i = 1;
+    Real Ue = edgeVel;
+    Real u_t = std::sqrt(tauWall/rho);
+    Real Rt= (delta/Ue)/(nu/(u_t*u_t));
+    Real SS   = Ue / (tauWall*tauWall*delta);
+    Real FS   = delta/Ue ;
 
-    int conv = 0;
-    for (int iter = 0; iter < 30; ++iter) {
-        // R(Pi) = 2*Pi - ln(1+Pi) - RHS
-        Real f = 2.0*Pi - std::log(1.0 + Pi) - RHS;
-
-        // R'(Pi) = 2 - 1/(1+Pi)
-        Real df = 2.0 - 1.0/(1.0 + Pi);
-
-        Real newPi = Pi - f/df;
-
-        if (std::fabs(newPi - Pi) < 1e-7) {
-            conv = 1;
-            return newPi;
-        }
-        Pi = newPi;
+    for (int n=0;n<Nsound;++n){
+        Real omegaBar= omega[n]*FS ;
+        phiqq[n] = ((a*std::pow(omegaBar,b))/(std::pow(i*std::pow(omegaBar, c), e) + std::pow((f*std::pow(Rt, g)*omegaBar), h))) / SS;
     }
 
-    if (conv==0){
-        Pi = 0.8* std::pow(betaC + 0.5,0.75);
-        return Pi;
-    }
 }
 
+void calc_WPS_Kamruzzaman(Real theta,
+                    Real deltaS,
+                    Real delta,
+                    Real tauWall,
+                    Real tauMax,
+                    Real edgeVel,
+                    Real dpdx,
+                    const Real (&omega)[Nsound],
+                    Real rho,
+                    Real nu,
+                    Real Uinf,
+                    Real (&phiqq)[Nsound]){
 
-Real calc_S_qq_Amiet_rozenberg(const Real Ux,const Real omega,const Real rho,const Real tau_w,
-    const Real delta,const Real delta_star,const Real theta,const Real dpdx,const Real tau_max) {
-    
-    
-    const Real nu = 1.51e-5;
+    Real Ue = edgeVel;
+    Real beta_c = (theta/tauWall)*(dpdx);
+    Real Cf = tauWall/ (0.5*Ue*Ue*rho);
+    Real lambda = std::sqrt(2/Cf);
+    Real G = 6.1 * std::sqrt(beta_c+1.81) - 1.7;
+    Real H = 1-G/lambda;
 
-    // Eq. 2
-    Real omega_bar = (omega * delta_star) / Ux;
-
-    Real D = delta / delta_star;
-
-    // Table 1: beta_c
-    Real beta_c =(theta / tau_w) * dpdx;
-
-    // Friction velocity
-    Real u_tau = std::sqrt(tau_w / rho);
-
-    //  under Eq. 4
-    Real RT = (delta*Ux) / (nu/(u_tau*u_tau));
-
-    // Between Eq. 10 and 11
-    Real A1 = 3.7 + 1.5 * beta_c;
-    Real A2 = std::min(3.0, 19.0 / std::sqrt(RT)) + 7.0;
-
-    // Eq. 9
-    Real C3 = 8.8 * std::pow(RT, -0.57);
-
-    // Eq. 11
-    Real F1 = 4.76 * std::pow((1.4 / D), 0.75) * (0.375 * A1 - 1.0);
-
-    // Eq. 13 (hard-coded PI value)
-    Real PI = solveWakeParameter(Ux,u_tau,delta,nu,beta_c);
-
-    // Eq. 12 - RHS
-    Real term1 = (2.82 * D*D) * std::pow((6.13*std::pow(D, -0.75) + F1), A1);
-    Real term2 = (4.2 * (PI / D) + 1.0) * (omega_bar * omega_bar);
-    Real numerator = term1 * term2;
-
-    Real denom1 = std::pow((4.76 * std::pow(omega_bar, 0.75) + F1), A1);
-    Real denom2 = std::pow(C3 * omega_bar, A2);
-    Real denominator = denom1 + denom2;
-
-    Real RHS = numerator / denominator;
-
-    // Eq. 12 - Phi_pp
-    Real Phi_pp = ((tau_max*tau_max * delta_star) / Ux) * RHS;
-
-    return Phi_pp;
-}
-
-Real calc_WPS_karuzmann(const Real Ux,const Real omega,const Real rho,const Real tau_w,
-    const Real delta,const Real delta_star,const Real theta,const Real dpdx,const Real tau_max) {
-    
-    const Real nu = 1.51e-5;
-
-    Real omega_bar = (omega * delta_star) / Ux;
-
-
-    // Eq 4 
-    Real H = delta_star / omega ; 
-    Real Cf = tau_w / (0.5 * rho * Ux*Ux);
-    Real lambda = std::sqrt((2.0/Cf)) ;
-    Real G = ((H-1)*lambda) / H ;
-    Real betaC = (G/6.1)*(G/6.1) - 1.81 ;
-
-    // Eq 3 
     Real wakeParam = 0.227;
-    if (betaC > -0.5){
-        wakeParam = 0.8 * std::pow(betaC+0.5, 0.75) ;
+    Real Pi = 0.227;
+    if (beta_c > -0.5){
+        Pi = 0.8*std::pow(beta_c+0.5, 0.75);
+    }
+    Real m = 0.5*std::pow(H/1.31, 0.3);
+    Real a = 0.45*(1.75*std::pow(Pi*Pi*beta_c*beta_c, m) + 15);
+    Real b = 2;
+    Real c = 1.637;
+    Real d = 0.27;
+    Real e = 2.47;
+    Real f = std::pow(1.15, -2.0/7.0);
+    Real g = -2/7;
+    Real h = 7;
+    Real i = 1;
+    Real u_t = std::sqrt(tauWall/rho);
+    Real Rt = (deltaS*u_t*u_t)/(nu*Ue);
+
+    Real SS   = Ue / (tauWall*tauWall*deltaS);
+    Real FS   = deltaS/Ue ;
+
+    for (int n=0;n<Nsound;++n){
+        Real omegaBar= omega[n]*FS ;
+        phiqq[n] = ((a*std::pow(omegaBar,b))/(std::pow(i*std::pow(omegaBar, c), e) + std::pow((f*std::pow(Rt, g)*omegaBar), h)))/SS;
     }
 
-    // Eq 5
-    Real m = 0.5*std::pow(H/1.31, 0.3);
-    Real B2 = 0.45*(1.75*std::pow(wakeParam*wakeParam*betaC*betaC, m) + 15.0) ;
-
-    // Eq 6
-    Real p = 1.637;
-    Real q = 2.47;
-    Real B1 = 0.27;
-    Real uTau = std::sqrt(tau_w/rho);
-    Real RT = (delta_star*uTau*uTau) / (Ux*nu) ; 
-    Real r = 2.0/7.0 ;
-    Real B3 = std::pow(1.15*RT, -r);
-
-    Real RHS = (B2 * (omega_bar*omega_bar)) / (std::pow(std::pow(omega_bar, p)+B1 , q) + std::pow(B3*omega_bar, 7));
-
-    Real Phi_pp = RHS * (tau_w*tau_w*delta_star) / Ux ; 
-
-    return Phi_pp;
 }
 
+void calc_WPS_Rozenburg(Real theta,
+                    Real deltaS,
+                    Real delta,
+                    Real tauWall,
+                    Real tauMax,
+                    Real edgeVel,
+                    Real dpdx,
+                    const Real (&omega)[Nsound],
+                    Real rho,
+                    Real nu,
+                    Real Uinf,
+                    Real (&phiqq)[Nsound]){
 
+    Real Ue = edgeVel;
+    Real Delta = delta/deltaS  ;
+    Real beta_c = std::max((theta/tauWall)*(dpdx),-0.5);
 
-Real TNO_velocity_profile(
-    Real y2,     // vertical distance [m]
-    Real delta,  // boundary layer thickness [m]
-    Real ustar,  // friction velocity [m/s]
-    Real Ue,     // edge velocity [m/s]
-    Real U0,     // free stream velocity [m/s]
-    Real nu,     // kinematic viscosity [m^2/s]
-    Real kappa,
-    Real B
-) {
-    Real pi = M_PI;
-    Real W = 1.0 - std::cos(pi * y2 / delta);
-    Real term1 = (1.0 / kappa) * std::log((ustar * y2) / nu) + B;
-    Real log_term = std::log((ustar * delta) / nu);
-    Real C = (Ue * U0 / ustar) - (1.0 / kappa) * log_term - B;
-    Real term2 = 0.5 * W * C;
-    return ustar * (term1 + term2);
-}
+    Real Pi = 0.227;
+    if (beta_c > -0.5){
+        Pi = 0.8*std::pow(beta_c+0.5, 0.75);
+    }
+    Real u_t = std::sqrt(tauWall/rho);
+    Real Rt = (deltaS*u_t*u_t)/(nu*Ue);
 
-Real analytic_Derivative(
-    Real y2,
-    Real delta,
-    Real ustar,
-    Real Ue,
-    Real U0,
-    Real nu,
-    Real kappa,
-    Real B
-) {
-    Real pi = M_PI;
-    Real log_term = std::log((ustar * delta) / nu);
-    Real C = (U0 * Ue / ustar) - (1.0 / kappa) * log_term - B;
-
-    Real term1 = ustar / (kappa * y2);
-    Real term2 = (ustar * C * pi) / (2.0 * delta) * std::sin(pi * y2 / delta);
-
-    return term1 + term2;
-}
-
-
-void compute_TNO_fields(const Real* y2, const Real delta, const Real ustar, const Real Ue, const Real U0, const Real nu,
-                        Real* U1, Real* dU,
-                        Real* L2, Real* ke, Real* u22, Real kappa, Real B) {
+    Real b = 2; // Done
+    Real c = 0.75; // Done
+    Real e = 3.7 + 1.5*beta_c ; //Done
+    Real d = 4.76*std::pow((1.4/Delta), 0.75) * (0.375*e -1) ; // Done
     
+    Real a = 2.82*Delta*Delta*std::pow((6.13*std::pow(Delta,-0.75) + d), e)* (4.2*(Pi/Delta) + 1); //Done
+    Real f = 8.8; //done
+    Real g = -0.57; //done
+    Real h = std::min(3.0,19.0/ std::sqrt(Rt)); // done
+    Real i = 4.76; //done
+
+    Real SS   = Ue / (tauMax*tauMax*deltaS);
+    Real FS   = deltaS/Ue ;
+
+    for (int n=0;n<Nsound;++n){
+        Real omegaBar= omega[n]*FS ;
+        phiqq[n] = ((a*std::pow(omegaBar,b))/(std::pow(i*std::pow(omegaBar, c), e) + std::pow((f*std::pow(Rt, g)*omegaBar), h)))/SS;
+    }
+
+}
+
+
+/////////////////////////////////// All TNO Funcs /////////////////////////////////////
+
+Real dcpdxc_from_dpdx(Real dpdx, Real rho, Real Uinf, Real chord)
+{
+    // dpdx = ∂p/∂x in Pa/m
+    // returns ∂Cp/∂(x/c)
+    return (2.0 * chord / (rho * Uinf * Uinf)) * dpdx;
+}
+
+void mean_velocity_profile(const Real (&y)[NblPoints],
+                           Real delta,
+                           Real u_t,
+                           Real nu,          // fluid kinematic viscosity
+                           Real chord,       // inputs.chord
+                           Real Uinf,
+                           Real rho,
+                           Real dpdx,      // dcpdxc
+                           Real tau_w,       // tau_w
+                           Real delta_s,     // delta_s
+                           Real (&U)[NblPoints],
+                           Real (&dUdy)[NblPoints])
+{
+    const Real k = 0.38;
+    const Real B = 5.0;
+
+    Real dcpdxc = dcpdxc_from_dpdx(dpdx,rho,Uinf,chord);
+
+    // dcpdx from nondimensional pressure gradient
+    Real dcpdx = dcpdxc * (1.0 / chord);
+
+    // beta parameter
+    Real beta = (delta_s / tau_w) * dcpdx;
+
+    // wake parameter
+    Real Pi_w = 0.8 * std::pow(beta + 0.5, 0.75);
+
+    // arrays for y_plus and u_plus
+    Real y_plus[NblPoints];
+    Real u_plus[NblPoints];
 
     for (int i = 0; i < NblPoints; ++i) {
-        Real y2_ratio = y2[i] / delta;
+        y_plus[i] = y[i] * u_t / nu;
 
-        U1[i] = TNO_velocity_profile(y2[i], delta, ustar, (Ue/U0), U0,nu,kappa,B);
-        dU[i] = analytic_Derivative(y2[i],delta,ustar,(Ue/U0),U0,nu,kappa,B);
+        if (y_plus[i] < 5.0) {
+            // inner layer
+            u_plus[i] = y_plus[i];
+        } else {
+            // outer layer
+            Real outer = (1.0 / k) * std::log(y_plus[i]) + B +
+                         (2.0 * Pi_w / k) *
+                         std::pow(std::sin(M_PI * y[i] / (2.0 * delta)), 2.0);
+            u_plus[i] = outer;
+        }
 
-        // Mixing length
-        Real lm_tmp = 0.085 * delta * std::tanh(kappa * y2[i] / (0.085 * delta));
-        lm_tmp /= std::sqrt(1.0 + B * std::pow(y2_ratio, 6));
-        Real lm = lm_tmp;
+        // streamwise velocity
+        U[i] = u_plus[i] * u_t;
+    }
 
-        // Eddy viscosity
-        Real nut = lm_tmp * lm_tmp * std::abs(dU[i]);
+    // derivative dUdy
+    for (int i = 0; i < NblPoints - 1; ++i) {
+        dUdy[i] = (U[i + 1] - U[i]) / (y[i + 1] - y[i]);
+    }
+    // last point with backward difference
+    dUdy[NblPoints - 1] =
+        (U[NblPoints - 1] - U[NblPoints - 2]) / (y[NblPoints - 1] - y[NblPoints - 2]);
+}
 
-        // Turbulent kinetic energy
-        Real kt = std::sqrt(nut * nut * dU[i] * dU[i] / 0.09);
+void velocity_fluctuations(const Real* U,
+                           Real Uref,
+                           Real* u_x,
+                           Real* u_y,
+                           int N)
+{
+    const Real gamma = 64.0;
+    const Real a = 0.2909;
+    const Real b = -0.2598;
 
-        // L2 length scale
-        L2[i] = lm_tmp / kappa;
+    for (int i = 0; i < N; ++i)
+    {
+        Real Ui = U[i];
+        Real Q  = 1.0 - std::exp(-gamma * (1.0 - Ui / Uref));
+        u_x[i]  = Ui * ((a + b * Ui / Uref) * Q);
+        u_y[i]  = 0.5 * u_x[i];
+    }
+}
 
-        // Eddy dissipation constant
-        ke[i] = 0.7468 / (2.0 * L2[i]);
+void Integral_Length_scale(
+    Real delta,
+    const Real (&y)[NblPoints],
+    Real (&gamma_y_vv)[NblPoints],
+    Real (&gamma_x_uu)[NblPoints])
+{
+    const Real k = 0.38;
 
-        // u2^2
-        u22[i] = (2.0 / 3.0) * kt;
+    for (int i = 0; i < NblPoints; ++i)
+    {
+        Real l_mix = 0.085 * delta * std::tanh((k / 0.085) * y[i] / delta);
+        gamma_y_vv[i] = l_mix / k;
+        gamma_x_uu[i] = 2.0 * gamma_y_vv[i]; // isotropic turbulence assumption
     }
 }
 
 
-Real get_phi22(Real k1, Real k3, Real ke, Real beta1, Real beta3) {
-    // Non-dimensionalised wavenumbers
-    Real k1e = beta1 * k1 / ke;
-    Real k3e = beta3 * k3 / ke;
+// Compute velocity spectrum at each BL location and frequency
+void velocity_spectrum(
+    const Real (&gamma_x_uu)[NblPoints],  // integral length scale at each y
+    const Real (&omega)[Nsound],          // angular frequencies
+    Real Uinf,                            // free stream velocity (inputs.U)
+    Real (&phi_uu)[NblPoints][Nsound],    // output
+    Real (&phi_vv)[NblPoints][Nsound],    // output
+    Real (&kx)[Nsound])                   // streamwise wave number
+{
+    const Real beta_x = 1.0;
+    const Real beta_z = 0.75;
 
-    // Numerator and denominator
-    Real numerator = 4.0 * beta1 * beta3;
-    Real denominator = 9.0 * M_PI * ke * ke;
-    Real denom_power = std::pow(1.0 + k1e * k1e + k3e * k3e, 7.0 / 3.0);
-
-    // Final result
-    return ((numerator / denominator) * ((k1e * k1e + k3e * k3e) / denom_power));
-}
-
-
-void compute_surface_pressure_spectrum(
-    const Real* omega,        // [Nfreq]
-    const Real* y2,          // [NblPoints]
-    const Real* dU,          // [NblPoints]
-    const Real* L2,          // [NblPoints]
-    const Real* ke,    // [NblPoints]
-    const Real* u22,         // [NblPoints]
-    Real  (&phi)[Nsound],               // [Nfreq] output
-    Real rho,
-    Real Uinf,
-    Real beta1,
-    Real beta3
-) {
-    
-    
+    // constant convective velocity
     Real Uc = 0.7 * Uinf;
 
-    for (int fi = 0; fi < Nsound; ++fi) {
+    // precompute kx
+    for (int n = 0; n < Nsound; ++n)
+        kx[n] = omega[n] / Uc;
 
+    // ratio of gamma functions
+    const Real gamma_ratio = std::tgamma(5.0/6.0) / std::tgamma(1.0/3.0);
+    const Real coeff_uu = gamma_ratio / (std::sqrt(M_PI) * std::tgamma(1.0/3.0));
 
-        Real k1 = omega[fi] / Uc;
-        Real k3 = 0.0;
-        Real kabs = std::sqrt(k1 * k1 + k3 * k3);
+    for (int i = 0; i < NblPoints; ++i)
+    {
+        Real ke = (std::sqrt(M_PI) / gamma_x_uu[i]) * gamma_ratio;
 
-        // Compute integrand and integrate via trapezoidal rule
-        Real integrand[NblPoints];
-        for (int i = 0; i < NblPoints; ++i) {
+        for (int n = 0; n < Nsound; ++n)
+        {
+            Real kx_over_ke = (beta_x * kx[n]) / ke;
 
-            Real phi22 = get_phi22(k1, k3, ke[i], beta1, beta3);
-            integrand[i] = L2[i] * u22[i] * dU[i] * dU[i] * phi22 * std::exp(-2.0 * kabs * y2[i]);
+            // phi_uu
+            Real denom = std::pow(1.0 + kx_over_ke * kx_over_ke, 5.0/6.0);
+            phi_uu[i][n] = coeff_uu * (beta_x / ke) * (1.0 / denom);
+
+            // phi_vv
+            Real denom2 = std::pow(1.0 + kx_over_ke * kx_over_ke, 7.0/3.0);
+            phi_vv[i][n] = (4.0 / (9.0 * M_PI))
+                         * (beta_x * beta_z / (ke * ke))
+                         * (kx_over_ke * kx_over_ke)
+                         / denom2;
         }
+    }
+}
 
-        // Manual trapezoidal integration over y2
-        Real total = 0.0;
-        for (int i = 0; i < NblPoints - 1; ++i) {
-            Real dy = y2[i + 1] - y2[i];
-            total += 0.5 * dy * (integrand[i] + integrand[i + 1]);
-        }
-
-        Real Lambda3 = (Uc / omega[fi]) * 1.4; // b = 1
-        phi[fi] = ((4.0 * M_PI * rho * rho) / (Lambda3 * Uc)) * total;
+void spanwise_correlation_length(
+    const Real (&omega)[Nsound], // angular frequencies
+    Real Uc,                     // convective velocity
+    Real (&gamma_p_z)[Nsound])   // output
+{
+    const Real bc = 1.4;
+    for (int n = 0; n < Nsound; ++n)
+    {
+        if (omega[n] > 0.0)
+            gamma_p_z[n] = bc * Uc / omega[n];
+        else
+            gamma_p_z[n] = 0.0; // avoid division by zero
     }
 }
 
 
+void Point_spectrum(
+    const Real (&U)[NblPoints],
+    const Real (&dUdy)[NblPoints],
+    const Real (&u_y)[NblPoints],
+    const Real (&gamma_y_vv)[NblPoints],
+    const Real (&phi_vv)[NblPoints][Nsound], // phi_vv(y,f)
+    const Real (&gamma_p_z)[Nsound],
+    Real Uc,                                  // convective velocity
+    const Real (&omega)[Nsound],
+    const Real (&y)[NblPoints],
+    Real rho,
+    Real kx[Nsound],                          // kx for each frequency
+    Real Uinf,                                // freestream speed (inputs.U)
+    Real (&Pi_w)[Nsound])                     // output
+{
+    // compute local convective velocity profile Uc_y(y)
+    Real Uc_y[NblPoints];
+    for (int j = 0; j < NblPoints; ++j)
+    {
+        Uc_y[j] = (Uc / Uinf) * U[j];
+    }
 
-void calc_S_qq_Amiet_TNO(const Real (&omega)[Nsound],const Real Ue, const Real Uinf, const Real rho,const Real tau_w,
-    const Real delta,const Real delta_star,const Real theta,const Real dpdx, Real (&phi)[Nsound]){
+    for (int i = 0; i < Nsound; ++i)
+    {
+        // Build temp(y)
+        Real temp[NblPoints];
+        for (int j = 0; j < NblPoints; ++j)
+        {
+            Real expTerm = std::exp(-2.0 * std::abs(kx[i]) * y[j]);
+            Real num = gamma_y_vv[j] * Uc_y[j] * dUdy[j] * dUdy[j] * (u_y[j] * u_y[j]);
+            Real den = (Uc_y[j] * Uc_y[j]);
+            temp[j] = (num / den) * phi_vv[j][i] * expTerm;
+        }
 
-    const Real nu = 1.51e-5;
-    const Real ustar = std::sqrt(tau_w/rho);
-    //create y2
-    Real y2[NblPoints];
+        // trapz integration over y
+        Real integral = 0.0;
+        for (int j = 0; j < NblPoints - 1; ++j)
+        {
+            Real dy = y[j + 1] - y[j];
+            integral += 0.5 * dy * (temp[j] + temp[j + 1]);
+        }
+
+        Pi_w[i] = (4.0 * M_PI * rho * rho / gamma_p_z[i]) * integral;
+    }
+}
+
+void calc_WPS_TNO(Real theta,
+                    Real deltaS,
+                    Real delta,
+                    Real tauWall,
+                    Real tauMax,
+                    Real edgeVel,
+                    Real dpdx,
+                    const Real (&omega)[Nsound],
+                    Real rho,
+                    Real nu,
+                    Real Uinf,
+                    Real chord,
+                    Real (&phiqq)[Nsound]){
     
-    Real y_start = 1e-6;
-    Real y_end   = delta - 1e-7;
-    Real dy = (y_end - y_start) / (NblPoints - 1);
-
-    Real add = 0.0 ;
+    // 2. Linspace y array
+    Real y[NblPoints];
+    Real dy = (delta - 0.0001) / (NblPoints - 1);
     for (int i = 0; i < NblPoints; ++i) {
-        y2[i] = y_start + add * dy;
-        add += 1.0;
+        y[i] = 0.0001 + i * dy;
     }
-        
-    Real U1[NblPoints];
-    Real dU[NblPoints];
-    Real u22[NblPoints];
-    Real L2[NblPoints];
-    Real ke[NblPoints];
 
-    compute_TNO_fields(y2,delta,ustar,Ue,Uinf,nu,U1,dU,L2,ke,u22,0.4,5.3);
-    compute_surface_pressure_spectrum(omega,y2,dU,L2,ke,u22,phi,rho,Uinf,1.0,0.75);
+    // 3. Arrays for intermediate results
+    Real U[NblPoints], dUdy[NblPoints];
+    Real u_x[NblPoints], u_y[NblPoints];
+    Real gamma_y_vv[NblPoints], gamma_x_uu[NblPoints];
+    Real phi_uu[NblPoints][Nsound], phi_vv[NblPoints][Nsound];
+    Real kx[Nsound], gamma_p_z[Nsound];
 
-}
+    Real u_t = std::sqrt(tauWall/rho);
 
+    //mean velocity profile 
+    mean_velocity_profile(y,delta,u_t,nu,chord,Uinf,rho,dpdx,tauWall,deltaS,U,dUdy);
 
+   
+    velocity_fluctuations(U,Uinf,u_x,u_y,NblPoints);
 
-
-
-
-Real calc_S_qq_Amiet_goody(
-    const Real Ux,         // Freestream velocity [m/s]
-    const Real omega,      // Angular frequency [rad/s]
-    const Real rho,        // Air density [kg/m³]
-    const Real tau_w,      // Wall shear stress [Pa]
-    const Real delta,      // Boundary layer thickness [m]
-    const Real delta_star, // Displacement thickness [m]
-    const Real theta,      // Momentum thickness [m] (not used)
-    const Real dpdx        // Pressure gradient [Pa/m] (not used)
-) {
-
+    Integral_Length_scale(delta, y, gamma_y_vv, gamma_x_uu);
     
-    const Real nu = 1.51e-5;  // Kinematic viscosity [m²/s]
+    velocity_spectrum(gamma_x_uu,omega,Uinf,phi_uu,phi_vv,kx);
+    
+    Real Uc = 0.7*Uinf ;
+    spanwise_correlation_length(omega,Uc,gamma_p_z);
 
-    Real u_tau = std::sqrt(tau_w / rho);
-    Real omega_bar = omega * delta / Ux;
-    Real Cf = tau_w / (0.5 * rho * Ux * Ux);
-    Real RT = (u_tau * delta / nu) * std::sqrt(Cf / 2.0);
+    Real Pi_w[Nsound];
+    Point_spectrum(U,dUdy,u_y,gamma_y_vv,phi_vv,gamma_p_z,Uc,omega,y,rho,kx,Uinf,Pi_w);
+    
+    for (int n=0;n<Nsound;++n){
+        phiqq[n] = Pi_w[n]*2.0;
+    }
 
-    const Real C1 = 0.5;
-    const Real C2 = 3.0;
-    Real C3 = 1.1 * std::pow(RT, -0.57);
-
-    Real numerator = C2 * omega_bar * omega_bar;
-    Real denom = std::pow(std::pow(omega_bar, 0.75) + C1, 3.7)
-                 + std::pow(C3 * omega_bar, 7.0);
-
-    Real F = numerator / denom;
-
-    Real Sqq = (tau_w * tau_w * delta * F) / Ux;
-
-    return Sqq;
 }
-
-

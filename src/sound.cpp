@@ -90,7 +90,9 @@ void calc_Spp_TNO(const Real theta,const Real deltaStar,const Real delta, const 
 
 
 
-Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S,const int doCps,const int Roz){
+Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf,
+    const Real X,const Real Y,const Real Z, const Real S,
+    const int doCps,const std::string& model){
 
     const Real startExp = 2.0; // start exp : 2 (100Hz)
     const Real endExp = 4.30103; // final exp : 4.30103 (20,000 Hz)
@@ -121,10 +123,19 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     
     if (tauMax > 0.0){ 
     
-        if (Roz){
+        if (model == "roz"){
             calc_Spp_Karuzmann(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
         }
-        else{
+        else if (model == "goo")
+        {
+            /* code */
+        }
+        else if (model == "kar")
+        {
+            /* code */
+        }
+        else if (model == "tno")
+        {
             calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
         }
     }
@@ -141,12 +152,22 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     }
 
     if (tauMax > 0.0){ 
-        if (Roz){
-                calc_Spp_Karuzmann(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
-            }
-            else{
-                calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
-            }
+    
+        if (model == "roz"){
+            calc_Spp_Karuzmann(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
+        }
+        else if (model == "goo")
+        {
+            /* code */
+        }
+        else if (model == "kar")
+        {
+            /* code */
+        }
+        else if (model == "tno")
+        {
+            calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
+        }
     }
     
     Real SppTotal[Nsound];
