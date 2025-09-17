@@ -6,10 +6,8 @@
     
     #if DO_BL_GRADIENT
     using Real = codi::RealReverseVec<16>;
-    #elif DO_SOUND
-    using Real = codi::RealReverse;
     #else
-    using Real = codi::RealReverseVec<2>;
+    using Real = codi::RealReverseVec<3>;
     #endif
 
     using Tape = typename Real::Tape;
