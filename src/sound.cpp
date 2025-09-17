@@ -11,14 +11,15 @@
 using json = nlohmann::json;
 
 
-void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
+void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,
+    const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,
+    const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S,
+    Real (&phiqq)[Nsound]){
 
     // start exp : 2 (100Hz)
     // final exp : 4.30103 (20,000 Hz)
 
-
     // loop over this with different omega vals
-    
     
     for (int i=0;i<Nsound;++i){
         phiqq[i] = calc_S_qq_Amiet_rozenberg(edgeVel,omega[i],oper.rho,tauW,delta,deltaStar,theta,dpdx,tauMax);
@@ -30,7 +31,10 @@ void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,c
     }
 }
 
-void calc_Spp_Karuzmann(const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
+void calc_Spp_Karuzmann(const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,
+    const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,
+    const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, 
+    Real (&phiqq)[Nsound]){
 
     // start exp : 2 (100Hz)
     // final exp : 4.30103 (20,000 Hz)
@@ -52,7 +56,9 @@ void calc_Spp_Karuzmann(const Real theta,const Real deltaStar,const Real delta,c
 
 
 
-void calc_Spp_Goody(const Real theta,const Real deltaStar,const Real delta,const Real tau,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf, const Real X,const Real Y,const Real Z, const Real S){
+void calc_Spp_Goody(const Real theta,const Real deltaStar,const Real delta,const Real tau,const Real edgeVel,const Real dpdx,
+    const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf, const Real X,
+    const Real Y,const Real Z, const Real S){
 
     // start exp : 2 (100Hz)
     // final exp : 4.30103 (20,000 Hz)
@@ -71,7 +77,9 @@ void calc_Spp_Goody(const Real theta,const Real deltaStar,const Real delta,const
 }
 
 
-void calc_Spp_TNO(const Real theta,const Real deltaStar,const Real delta, const Real Ue,const Real tau,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
+void calc_Spp_TNO(const Real theta,const Real deltaStar,const Real delta, const Real Ue,const Real tau,const Real dpdx, 
+    const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,
+    const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
 
     // start exp : 2 (100Hz)
     // final exp : 4.30103 (20,000 Hz)
@@ -90,7 +98,8 @@ void calc_Spp_TNO(const Real theta,const Real deltaStar,const Real delta, const 
 
 
 
-Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, const Real X,const Real Y,const Real Z, const Real S,const int doCps,const int Roz){
+Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf, 
+    const Real X,const Real Y,const Real Z, const Real S,const int doCps,const int Roz){
 
     const Real startExp = 2.0; // start exp : 2 (100Hz)
     const Real endExp = 4.30103; // final exp : 4.30103 (20,000 Hz)
