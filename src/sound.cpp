@@ -114,6 +114,10 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     Real dpdx = topStates[4];
     Real tauWall = topStates[5];
     Real delta = topStates[6];    
+
+    if (tauWall < 0.0) {
+        tauWall *= -1.0;
+    }
     
     if (tauMax > 0.0){ 
     
@@ -131,6 +135,10 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     dpdx = botStates[4];
     tauWall = botStates[5];
     delta = botStates[6];  
+
+    if (tauWall < 0.0) {
+        tauWall *= -1.0;
+    }
 
     if (tauMax > 0.0){ 
         if (Roz){
