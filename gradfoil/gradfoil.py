@@ -10,9 +10,6 @@ from .xfoilExtract import xfoil_start_run
 BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
 EXEC_FWD = os.path.join(BIN_DIR, "CFoil_fwd")
 EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
-EXEC_NOISE = os.path.join(BIN_DIR, "CFoil_Noise")
-
-
 
 
 def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,model,rho,nu):
