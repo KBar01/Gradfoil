@@ -4,26 +4,63 @@
 #include "real_type.h"
 
 
-Real calc_S_qq_Amiet_rozenberg(const Real Ux,const Real omega,const Real rho,const Real tau_w,
-    const Real delta,const Real delta_star,const Real theta,const Real dpdx,const Real tau_max);
-
-Real calc_S_qq_Amiet_goody(
-    const Real Ux,         // Freestream velocity [m/s]
-    const Real omega,      // Angular frequency [rad/s]
-    const Real rho,        // Air density [kg/m³]
-    const Real tau_w,      // Wall shear stress [Pa]
-    const Real delta,      // Boundary layer thickness [m]
-    const Real delta_star, // Displacement thickness [m]
-    const Real theta,      // Momentum thickness [m] (not used)
-    const Real dpdx        // Pressure gradient [Pa/m] (not used)
+void calc_WPS_Goody(Real theta,
+                    Real deltaS,
+                    Real delta,
+                    Real tauWall,
+                    Real tauMax,
+                    Real edgeVel,
+                    Real dpdx,
+                    const Real (&omega)[Nsound],
+                    Real rho,
+                    Real nu,
+                    Real Uinf,
+                    Real (&phiqq)[Nsound]
 );
 
-Real calc_WPS_karuzmann(const Real Ux,const Real omega,const Real rho,const Real tau_w,
-    const Real delta,const Real delta_star,const Real theta,const Real dpdx,const Real tau_max);
 
-void calc_S_qq_Amiet_TNO(const Real (&omega)[Nsound],const Real Ue, const Real Uinf, const Real rho,const Real tau_w,
-    const Real delta,const Real delta_star,const Real theta,const Real dpdx, Real (&phi)[Nsound]);
+void calc_WPS_Kamruzzaman(Real theta,
+                    Real deltaS,
+                    Real delta,
+                    Real tauWall,
+                    Real tauMax,
+                    Real edgeVel,
+                    Real dpdx,
+                    const Real (&omega)[Nsound],
+                    Real rho,
+                    Real nu,
+                    Real Uinf,
+                    Real (&phiqq)[Nsound]
+);
 
+void calc_WPS_Rozenburg(Real theta,
+                    Real deltaS,
+                    Real delta,
+                    Real tauWall,
+                    Real tauMax,
+                    Real edgeVel,
+                    Real dpdx,
+                    const Real (&omega)[Nsound],
+                    Real rho,
+                    Real nu,
+                    Real Uinf,
+                    Real (&phiqq)[Nsound]
+);
+
+void calc_WPS_TNO(Real theta,
+                    Real deltaS,
+                    Real delta,
+                    Real tauWall,
+                    Real tauMax,
+                    Real edgeVel,
+                    Real dpdx,
+                    const Real (&omega)[Nsound],
+                    Real rho,
+                    Real nu,
+                    Real Uinf,
+                    Real chord,
+                    Real (&phiqq)[Nsound]
+);
 
 Real calc_Spp_Freq(
     Real c0,  Real rho0, Real C,Real MX, Real omega,

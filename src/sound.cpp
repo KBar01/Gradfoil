@@ -11,84 +11,31 @@
 using json = nlohmann::json;
 
 
-void calc_Spp_Rozenburg(const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
+void calc_Spp_amiet(const std::string& model, const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound], Real (&phiqq)[Nsound], const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S){
 
-    // start exp : 2 (100Hz)
-    // final exp : 4.30103 (20,000 Hz)
+    Real phiqq[Nsound] ; 
 
-
-    // loop over this with different omega vals
-    
-    
-    for (int i=0;i<Nsound;++i){
-        phiqq[i] = calc_S_qq_Amiet_rozenberg(edgeVel,omega[i],oper.rho,tauW,delta,deltaStar,theta,dpdx,tauMax);
+    if (model == "roz"){
+            calc_WPS_Rozenburg(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,1.5e-5,Uinf,phiqq);
+        }
+    else if (model == "goo")
+    {
+        calc_WPS_Goody(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,1.5e-5,Uinf,phiqq);
+    }
+    else if (model == "kam")
+    {
+        calc_WPS_Kamruzzaman(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,1.5e-5,Uinf,phiqq);
+    }
+    else if (model == "tno")
+    {
+        calc_WPS_TNO(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,1.5e-5,Uinf,geom.chord,phiqq);
     }
 
     for (int i=0;i<Nsound;++i){
         Spp[i]  = calc_Spp_Freq(340, oper.rho, geom.chord, (Uinf/340), omega[i], X, Y, Z, S, phiqq[i], 0);
-        Spp[i] *= 4 * 2*M_PI;
+        //Spp[i] *= 4 * 2*M_PI;
     }
 }
-
-void calc_Spp_Karuzmann(const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
-
-    // start exp : 2 (100Hz)
-    // final exp : 4.30103 (20,000 Hz)
-
-
-    // loop over this with different omega vals
-    
-    
-    for (int i=0;i<Nsound;++i){
-        phiqq[i] = calc_WPS_karuzmann(edgeVel,omega[i],oper.rho,tauW,delta,deltaStar,theta,dpdx,tauMax);
-    }
-
-    for (int i=0;i<Nsound;++i){
-        Spp[i]  = calc_Spp_Freq(340, oper.rho, geom.chord, (Uinf/340), omega[i], X, Y, Z, S, phiqq[i], 0);
-        Spp[i] *= 4 * 2*M_PI;
-    }
-}
-
-
-
-
-void calc_Spp_Goody(const Real theta,const Real deltaStar,const Real delta,const Real tau,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf, const Real X,const Real Y,const Real Z, const Real S){
-
-    // start exp : 2 (100Hz)
-    // final exp : 4.30103 (20,000 Hz)
-
-
-    // loop over this with different omega vals
-    Real phiqq[Nsound] ;
-    
-    for (int i=0;i<Nsound;++i){
-        phiqq[i] = calc_S_qq_Amiet_goody(Uinf,omega[i],oper.rho,tau,delta,deltaStar,theta,dpdx);
-    }
-
-    for (int i=0;i<Nsound;++i){
-        Spp[i]  = calc_Spp_Freq(340, oper.rho, geom.chord, (Uinf/340), omega[i], X, Y, Z, S, phiqq[i], 0);
-    }
-}
-
-
-void calc_Spp_TNO(const Real theta,const Real deltaStar,const Real delta, const Real Ue,const Real tau,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound],const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S, Real (&phiqq)[Nsound]){
-
-    // start exp : 2 (100Hz)
-    // final exp : 4.30103 (20,000 Hz)
-
-
-    // loop over this with different omega vals
-    Real rho = 1.2;
-    
-    calc_S_qq_Amiet_TNO(omega,Ue,Uinf,rho,tau,delta,deltaStar,theta,dpdx,phiqq);
-
-    for (int i=0;i<Nsound;++i){
-        Spp[i]  = calc_Spp_Freq(340, oper.rho, geom.chord, (Uinf/340), omega[i], X, Y, Z, S, phiqq[i], 0);
-        Spp[i] *= 4 * 2*M_PI;
-    }
-}
-
-
 
 Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf,
     const Real X,const Real Y,const Real Z, const Real S,
@@ -122,22 +69,9 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     }
     
     if (tauMax > 0.0){ 
-    
-        if (model == "roz"){
-            calc_Spp_Karuzmann(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
-        }
-        else if (model == "goo")
-        {
-            /* code */
-        }
-        else if (model == "kar")
-        {
-            /* code */
-        }
-        else if (model == "tno")
-        {
-            calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppUpper,oper,geom,Uinf,X,Y,Z,S,phiqqUpper);
-        }
+        
+        calc_Spp_amiet(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,
+                        dpdx,omega,SppUpper,phiqqUpper,oper,geom,Uinf,X,Y,Z,S);
     }
     theta = botStates[0];
     deltaS = botStates[1];
@@ -152,22 +86,8 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     }
 
     if (tauMax > 0.0){ 
-    
-        if (model == "roz"){
-            calc_Spp_Karuzmann(theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
-        }
-        else if (model == "goo")
-        {
-            /* code */
-        }
-        else if (model == "kar")
-        {
-            /* code */
-        }
-        else if (model == "tno")
-        {
-            calc_Spp_TNO(theta,deltaS,delta,edgeVel,tauWall,dpdx,omega,SppLower,oper,geom,Uinf,X,Y,Z,S,phiqqLower);
-        }
+        calc_Spp_amiet(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,
+                        dpdx,omega,SppLower,phiqqLower,oper,geom,Uinf,X,Y,Z,S);
     }
     
     Real SppTotal[Nsound];

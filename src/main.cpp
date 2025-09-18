@@ -43,7 +43,7 @@ bool runCode(
     const Real &topTransPos,
     const Real &botTransPos,
     const bool force,
-    const int Roz){
+    const std::string model){
 
     #if DO_BL_GRADIENT
     Real outputs[16] ; // 12 if doing all gradients CL CD and BL states for both surfaces
@@ -249,7 +249,7 @@ bool runCode(
     
     // if codipack, only use sound code if sound flag on. if not codipack run sound regardless
     
-    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps,Roz);
+    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps,model);
    
    
     std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
@@ -484,7 +484,7 @@ int main(){
     const Real topTransPos = j["toptrans"].get<double>();
     const Real botTransPos = j["bottrans"].get<double>();
     
-    const int Roz = j["userozenburg"].get<int>();
+    const std::string model = j["model"].get<std::string>();
 
     Real initStates[RVdimension] = {0};
     bool initTurb[Ncoords+Nwake] = {false} ;
@@ -506,7 +506,7 @@ int main(){
     #endif
     
     bool converged = runCode(doRestart,doXfoilStart,doGetPoints,targetAlphaDeg,Re,Ma,rhoInf,nuInf,inXcoords,inYcoords,initStates,initTurb,sampleTE,X,Y,Z,S,customUinf,
-        useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,Roz);
+        useCustUinf,doCps,Ncrit,Ufac,TEfac,topTransPos,botTransPos,force,model);
     
     return converged;
     

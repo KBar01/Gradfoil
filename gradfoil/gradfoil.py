@@ -15,7 +15,7 @@ EXEC_NOISE = os.path.join(BIN_DIR, "CFoil_Noise")
 
 
 
-def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,useRoz,rho,nu):
+def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,model,rho,nu):
     
 
     cwd = os.getcwd()
@@ -45,7 +45,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         "toptrans":      toptrans,
         "bottrans":      bottrans,
         "forcetrans":    force,
-        "userozenburg":  useRoz
+        "model":  model
     }
 
     # Write JSON input
@@ -169,12 +169,12 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
 
 
 
-def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0,Uinf=1,custUinf=0,trackCLs=0,returnFoilCps=0,ncrit=9.0,Ufac=2.5,TEfac=0.06,toptrans=0.5,bottrans=0.5,forcetrans=0,rho=1.225,nu=1.789e-5,repanel=1,useRoz=1):
+def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0,Uinf=1,custUinf=0,trackCLs=0,returnFoilCps=0,ncrit=9.0,Ufac=2.5,TEfac=0.06,toptrans=0.5,bottrans=0.5,forcetrans=0,rho=1.225,nu=1.789e-5,repanel=1,model="kam"):
     
     
 
     if repanel:
-        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,forcetrans,useRoz,rho,nu)
+        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,forcetrans,model,rho,nu)
 
         if success:
             return success
@@ -183,7 +183,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
             for uf, tef in [(1.8,0.1), (2.1,0.09), (2.6,0.09), (1.0,0.09), (1.0,1.1), (1.5,0.09)]:
                 
                 print('trying different panel distribution ('+str(count)+'/6)')
-                success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef,toptrans,bottrans,forcetrans,useRoz,rho,nu)
+                success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef,toptrans,bottrans,forcetrans,model,rho,nu)
                 if success:
                     break
                 count +=1
@@ -191,7 +191,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
             return success
     
     else:
-        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,forcetrans,useRoz,rho,nu)
+        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,forcetrans,model,rho,nu)
         return success
     
 
