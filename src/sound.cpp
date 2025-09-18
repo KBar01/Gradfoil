@@ -12,9 +12,7 @@ using json = nlohmann::json;
 
 
 void calc_Spp_amiet(const std::string& model, const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound], Real (&phiqq)[Nsound], const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S){
-
-    Real phiqq[Nsound] ; 
-
+ 
     if (model == "roz"){
             calc_WPS_Rozenburg(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,1.5e-5,Uinf,phiqq);
         }
