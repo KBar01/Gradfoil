@@ -19,15 +19,15 @@ void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,co
                     Real (&WPS)[Nsound]){
  
     if (model == "roz"){
-            calc_WPS_Rozenburg(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
+            calc_WPS_Rozenburg(theta,deltaStar,delta,tauMax,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
         }
     else if (model == "goo")
     {
-        calc_WPS_Goody(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
+        calc_WPS_Goody(theta,deltaStar,delta,tauMax,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
     }
     else if (model == "kam")
     {
-        calc_WPS_Kamruzzaman(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
+        calc_WPS_Kamruzzaman(theta,deltaStar,delta,tauMax,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
     }
     else if (model == "tno")
     {
