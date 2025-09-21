@@ -31,7 +31,7 @@ void calc_WPS_Goody(Real theta,
 
     for (int n=0;n<Nsound;++n){
         Real omegaBar= omega[n]*FS ;
-        phiqq[n] = ((a*std::pow(omegaBar,b))/(std::pow(i*std::pow(omegaBar, c), e) + std::pow((f*std::pow(Rt, g)*omegaBar), h))) / SS;
+        phiqq[n] = ((a*std::pow(omegaBar,b))/(std::pow(i*std::pow(omegaBar, c) + d, e) + std::pow((f*std::pow(Rt, g)*omegaBar), h))) / SS;
     }
 
 }
@@ -79,7 +79,7 @@ void calc_WPS_Kamruzzaman(Real theta,
 
     for (int n=0;n<Nsound;++n){
         Real omegaBar= omega[n]*FS ;
-        phiqq[n] = ((a*std::pow(omegaBar,b))/(std::pow(i*std::pow(omegaBar, c), e) + std::pow((f*std::pow(Rt, g)*omegaBar), h)))/SS;
+        phiqq[n] = ((a*std::pow(omegaBar,b))/(std::pow(i*std::pow(omegaBar, c) + d, e) + std::pow((f*std::pow(Rt, g)*omegaBar), h)))/SS;
     }
 
 }
@@ -98,33 +98,53 @@ void calc_WPS_Rozenburg(Real theta,
                     Real (&phiqq)[Nsound]){
 
     Real Ue = edgeVel;
+    Ue = 64.6;
+    
     Real Delta = delta/deltaS  ;
+    
     Real beta_c = std::max((theta/tauWall)*(dpdx),-0.5);
-
     Real Pi = 0.227;
     if (beta_c > -0.5){
         Pi = 0.8*std::pow(beta_c+0.5, 0.75);
     }
+    
+    /* roz test 
+    Delta = 6.0;
+    delta = 0.00142;
+    deltaS = 0.00236;
+    theta = 0.00157;
+    tauWall = 5.43;
+    tauMax = 5.43;
+    beta_c = 3.51;
+    Pi = 1.56;
+    */
+
     Real u_t = std::sqrt(tauWall/rho);
     Real Rt = (deltaS*u_t*u_t)/(nu*Ue);
 
+
+
     Real b = 2; // Done
     Real c = 0.75; // Done
-    Real e = 3.7 + 1.5*beta_c ; //Done
-    Real d = 4.76*std::pow((1.4/Delta), 0.75) * (0.375*e -1) ; // Done
+    Real A1 = 3.7 + 1.5*beta_c ; //Done - A1
+    Real F1 = 4.76*std::pow((1.4/Delta), 0.75) * (0.375*A1 -1) ; // F1
     
-    Real a = 2.82*Delta*Delta*std::pow((6.13*std::pow(Delta,-0.75) + d), e)* (4.2*(Pi/Delta) + 1); //Done
+    Real a = (2.82*Delta*Delta*std::pow((6.13*std::pow(Delta,-0.75) + F1), A1))  *  (4.2*(Pi/Delta) + 1); //Done
     Real f = 8.8; //done
     Real g = -0.57; //done
-    Real h = std::min(3.0,19.0/ std::sqrt(Rt)); // done
+    Real F2 = std::min(3.0,19.0/ std::sqrt(Rt)); // done
     Real i = 4.76; //done
 
     Real SS   = Ue / (tauMax*tauMax*deltaS);
     Real FS   = deltaS/Ue ;
 
+    Real C3prime = 8.8*std::pow(Rt, -0.57);
+
     for (int n=0;n<Nsound;++n){
         Real omegaBar= omega[n]*FS ;
-        phiqq[n] = ((a*std::pow(omegaBar,b))/(std::pow(i*std::pow(omegaBar, c), e) + std::pow((f*std::pow(Rt, g)*omegaBar), h)))/SS;
+        Real top = (a*std::pow(omegaBar, 2));
+        Real bot = std::pow(4.76*std::pow(omegaBar, 0.75) + F1, A1)   +   std::pow((C3prime*omegaBar), F2);
+        phiqq[n] = ( top/bot )/SS;
     }
 
 }

@@ -657,7 +657,9 @@ inline void Wavenumbers_subcrit(
 {
     // k_min_bar_prime real
     Real arg = -mu_bar*mu_bar + (K_2_bar/beta)*(K_2_bar/beta);
-    k_min_bar_prime = (arg > 0.0) ? std::sqrt(arg) : 0.0;
+    
+    Real zero = 0.0;
+    k_min_bar_prime = (arg > 0.0) ? std::sqrt(arg) : zero;
 
     // A1' = K1 + M*mu - i*kmin
     A1prime_r = K_1_bar + M*mu_bar;
@@ -798,19 +800,6 @@ void TE_noise_outer(
 {
 
 
-    Real beta, S0, alpha, U_c;
-
-    
-  
-    // Outputs (arrays):
-    Real C[Nsound];
-    Real K_bar[Nsound];
-    Real mu_bar[Nsound];
-    Real K_1_bar[Nsound];
-    Real K_2_bar[Nsound];
-    Real k_bar[Nsound];
-
- 
     // Finding wavenumbers etc /////////////////////////////////
     Real beta = std::sqrt(1.0 - M*M);
     // distance to observer
@@ -819,7 +808,13 @@ void TE_noise_outer(
     Real U_c = 0.7 * U; 
     Real alpha = U / U_c;
 
-    
+    // Outputs (arrays):
+    Real C[Nsound];
+    Real K_bar[Nsound];
+    Real mu_bar[Nsound];
+    Real K_1_bar[Nsound];
+    Real K_2_bar[Nsound];
+    Real k_bar[Nsound];
     for (int i=0; i<Nsound; ++i)
     {
         // acoustic wavenumber
@@ -871,26 +866,14 @@ void TE_noise_outer(
     }
 
 
-    // integrated WPS model (Eq 20 in R&M)
-    for (int i=0;i<Nsound;++i){
-        WPS_lower[i] *= l_y[i]/M_PI;
-        WPS_upper[i] *= l_y[i]/M_PI;
-    }
-
     // far field spectra (eq 18 in R&M) :
 
     for (int i=0;i<Nsound;++i){
-        WPS_lower[i] *= l_y[i]/M_PI;
-        WPS_upper[i] *= l_y[i]/M_PI;
-    }
-
-
-    for (int i=0;i<Nsound;++i){
         
-        Real term1 = 0.25* std::pow((omega[i]*c*z)/(c0*2.0*2.0*M_PI*S0*S0), 2.0);
+        Real term1 = std::pow((omega[i]*c*z)/(c0*2.0*2.0*M_PI*S0*S0), 2.0);
 
-        Real Spp_upper = term1*2.0*M_PI*span*I_abs2[i]*WPS_upper[i];
-        Real Spp_lower = term1*2.0*M_PI*span*I_abs2[i]*WPS_lower[i];
+        Real Spp_upper = term1*2.0*M_PI*span*I_abs2[i]*(WPS_upper[i]*l_y[i]/M_PI);
+        Real Spp_lower = term1*2.0*M_PI*span*I_abs2[i]*(WPS_lower[i]*l_y[i]/M_PI);
 
         farfieldSpectra[i] = Spp_upper + Spp_lower ;
     }

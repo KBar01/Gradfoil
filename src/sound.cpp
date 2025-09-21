@@ -93,16 +93,27 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
         calc_WPS(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,
                     omega,nu,oper,geom,Uinf,X,Y,Z,S,WPSLower);
     }
+
+    #ifndef USE_CODIPACK
+    
+    json amiet;
+    if (doCps){
+        amiet["freq"] = Freq;
+        amiet["phiqqupper"] = WPSUpper;
+        amiet["phiqqlower"] = WPSLower;
+    }
+
+    #endif
     
     Real farfieldSpectra[Nsound] ;
     TE_noise_outer((Uinf/340),Uinf,X,Y,Z,geom.chord/2,0.0,geom.chord,S,340,oper.rho,nu,
                 omega,WPSLower,WPSUpper,farfieldSpectra);
 
     // integrate S_pp over frequency:
-    double integral = 0.0;
+    Real integral = 0.0;
     for (int i = 0; i < Nsound - 1; ++i) {
-        double df = Freq[i+1] - Freq[i];
-        integral += 0.5 * (farfieldSpectra[i] + farfieldSpectra[i+1]) * 2*M_PI* df;
+        Real df = Freq[i+1] - Freq[i];
+        integral += 0.5 * (farfieldSpectra[i] + farfieldSpectra[i+1]) * 8*M_PI* df;
     }
 
     // Now convert to dB re 20 µPa:
@@ -113,10 +124,6 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     #ifndef USE_CODIPACK
     if (doCps){
     
-        json amiet;
-        amiet["freq"] = Freq;
-        amiet["phiqqupper"] = WPSUpper;
-        amiet["phiqqlower"] = WPSUpper;
         amiet["spptotal"]   = farfieldSpectra;
         std::ofstream amietFile("amiet.json");
         amietFile << amiet.dump(4);  // pretty print with 4 spaces indentation
