@@ -11,32 +11,38 @@
 using json = nlohmann::json;
 
 
-void calc_Spp_amiet(const std::string& model, const Real theta,const Real deltaStar,const Real delta,const Real tauW,const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound],Real (&Spp)[Nsound], Real (&phiqq)[Nsound], const Oper&oper,const Geom&geom,const Real Uinf,const Real X,const Real Y,const Real Z,const  Real S){
+void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,const Real delta,const Real tauW,
+                    const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound], Real nu,
+                    const Oper&oper,const Geom&geom,const Real Uinf,
+                    const Real X,const Real Y,const Real Z,const  Real S,
+                
+                    Real (&WPS)[Nsound]){
  
     if (model == "roz"){
-            calc_WPS_Rozenburg(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,1.5e-5,Uinf,phiqq);
+            calc_WPS_Rozenburg(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
         }
     else if (model == "goo")
     {
-        calc_WPS_Goody(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,1.5e-5,Uinf,phiqq);
+        calc_WPS_Goody(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
     }
     else if (model == "kam")
     {
-        calc_WPS_Kamruzzaman(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,1.5e-5,Uinf,phiqq);
+        calc_WPS_Kamruzzaman(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
     }
     else if (model == "tno")
     {
-        calc_WPS_TNO(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,1.5e-5,Uinf,geom.chord,phiqq);
+        calc_WPS_TNO(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,geom.chord,WPS);
     }
 
-    for (int i=0;i<Nsound;++i){
-        Spp[i]  = calc_Spp_Freq(340, oper.rho, geom.chord, (Uinf/340), omega[i], X, Y, Z, S, phiqq[i], 0);
-        //Spp[i] *= 4 * 2*M_PI;
-    }
+    //for (int i=0;i<Nsound;++i){
+    //    Spp[i]  = calc_Spp_Freq(340, oper.rho, geom.chord, (Uinf/340), omega[i], X, Y, Z, S, phiqq[i], 0);
+    //    //Spp[i] *= 4 * 2*M_PI;
+    //}
+
 }
 
 Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf,
-    const Real X,const Real Y,const Real Z, const Real S,
+    const Real X,const Real Y,const Real Z, const Real S, const Real nu,
     const int doCps,const std::string& model){
 
     const Real startExp = 2.0; // start exp : 2 (100Hz)
@@ -51,8 +57,8 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
         omega[i] =  Freq[i] * 2.0 * M_PI;
     }
 
-    Real SppUpper[Nsound]={0}, SppLower[Nsound]={0};
-    Real phiqqUpper[Nsound]={0},phiqqLower[Nsound]={0};
+    //Real SppUpper[Nsound]={0}, SppLower[Nsound]={0};
+    Real WPSUpper[Nsound]={0},WPSLower[Nsound]={0};
     
     Real theta = topStates[0];
     Real deltaS = topStates[1];
@@ -68,8 +74,8 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     
     if (tauMax > 0.0){ 
         
-        calc_Spp_amiet(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,
-                        dpdx,omega,SppUpper,phiqqUpper,oper,geom,Uinf,X,Y,Z,S);
+        calc_WPS(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,
+                    omega,nu,oper,geom,Uinf,X,Y,Z,S,WPSUpper);
     }
     theta = botStates[0];
     deltaS = botStates[1];
@@ -84,35 +90,34 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     }
 
     if (tauMax > 0.0){ 
-        calc_Spp_amiet(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,
-                        dpdx,omega,SppLower,phiqqLower,oper,geom,Uinf,X,Y,Z,S);
+        calc_WPS(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,
+                    omega,nu,oper,geom,Uinf,X,Y,Z,S,WPSLower);
     }
     
-    Real SppTotal[Nsound];
-    for (int i=0;i<Nsound;++i){
-        SppTotal[i] = SppLower[i] + SppUpper[i];
+    Real farfieldSpectra[Nsound] ;
+    TE_noise_outer((Uinf/340),Uinf,X,Y,Z,geom.chord/2,0.0,geom.chord,S,340,oper.rho,nu,
+                omega,WPSLower,WPSUpper,farfieldSpectra);
+
+    // integrate S_pp over frequency:
+    double integral = 0.0;
+    for (int i = 0; i < Nsound - 1; ++i) {
+        double df = Freq[i+1] - Freq[i];
+        integral += 0.5 * (farfieldSpectra[i] + farfieldSpectra[i+1]) * 2*M_PI* df;
     }
 
-    // Trapezoidal integration over frequency
-    Real integral = 0.0;
-    for (int i = 0; i < Nsound-1; ++i) {
-        Real df = Freq[i + 1] - Freq[i];
-        integral += 0.5 * (SppTotal[i] + SppTotal[i + 1]) * df;
-    }
-
-    // Convert to OASPL (in dB)
-    Real pref2 = (20e-6)*(20e-6);
+    // Now convert to dB re 20 µPa:
+    Real pref2 = (20e-6)*(20e-6); // reference pressure squared
     Real OASPL = 10.0 * std::log10(integral / pref2);
+
+
     #ifndef USE_CODIPACK
     if (doCps){
     
         json amiet;
         amiet["freq"] = Freq;
-        amiet["phiqqupper"] = phiqqUpper;
-        amiet["phiqqlower"] = phiqqLower;
-        amiet["sppupper"]   = SppUpper;
-        amiet["spplower"]   = SppLower;
-        amiet["spptotal"]   = SppTotal;
+        amiet["phiqqupper"] = WPSUpper;
+        amiet["phiqqlower"] = WPSUpper;
+        amiet["spptotal"]   = farfieldSpectra;
         std::ofstream amietFile("amiet.json");
         amietFile << amiet.dump(4);  // pretty print with 4 spaces indentation
         amietFile.close();

@@ -12,6 +12,7 @@ using std::abs;
 using std::exp;
 
 
+
 // Compute sqrt(x + i*y) = u + i*v
 void sqrt_complex(Real x, Real y, Real& u, Real& v) {
     Real magnitude = std::sqrt(x * x + y * y);

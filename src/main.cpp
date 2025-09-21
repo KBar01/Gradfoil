@@ -24,7 +24,7 @@ bool runCode(
     Real Re, 
     Real Ma,
     Real rhoInf,
-    Real dynViscInf,
+    Real kinViscInf,
     const Real (&inXcoords)[Nin], 
     Real (&inYcoords)[Nin],
     const Real (&statesInit)[RVdimension],
@@ -80,7 +80,7 @@ bool runCode(
 
     
     if (!useCustUinf){
-        Uinf = (Re*dynViscInf)/(oper.rho*chordScale) ; // for scaling the BL outputs later
+        Uinf = (Re*kinViscInf)/(chordScale) ; // for scaling the BL outputs later
     }
     Geom geom;
     geom.chord = chordScale;
@@ -249,7 +249,7 @@ bool runCode(
     
     // if codipack, only use sound code if sound flag on. if not codipack run sound regardless
     
-    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,doCps,model);
+    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,kinViscInf,doCps,model);
    
    
     std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};

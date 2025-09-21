@@ -68,4 +68,21 @@ Real calc_Spp_Freq(
     Real S, Real Phi_qq_input,int Order
 );
 
+
+void TE_noise_outer(
+    // Flow / geometry parameters formerly in 'inputs':
+    Real M, Real U, Real x, Real y, Real z,
+    Real b, Real Ky, Real c, Real span,
+
+    // Fluid properties formerly in 'fluid':
+    Real c0, Real rho, Real nu,
+
+    // Array of frequencies:
+    const Real omega[Nsound],
+    Real (&WPS_lower)[Nsound], Real (&WPS_upper)[Nsound],
+
+    // Output wall-pressure spectrum:
+    Real (&farfieldSpectra)[Nsound]
+);
+
 #endif
