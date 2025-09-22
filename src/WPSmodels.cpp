@@ -50,7 +50,9 @@ void calc_WPS_Kamruzzaman(Real theta,
                     Real (&phiqq)[Nsound]){
 
     Real Ue = edgeVel;
-    Real beta_c = (theta/tauWall)*(dpdx);
+    Real beta_c = std::max((theta/tauWall)*(dpdx),-0.5);
+
+    
     Real Cf = tauWall/ (0.5*Ue*Ue*rho);
     Real lambda = std::sqrt(2/Cf);
     Real G = 6.1 * std::sqrt(beta_c+1.81) - 1.7;
