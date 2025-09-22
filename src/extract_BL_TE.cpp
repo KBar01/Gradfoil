@@ -222,6 +222,89 @@ Real interpolate_cf(const Real* xcoords, const Real* states, const int* nodeIdx,
 void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, const Real*Cps, const Oper&oper, const Vsol&vsol, const Param&param,
     Real (&topBLStates)[7],Real (&botBLStates)[7],const Real Uinf, const Geom&geom,const Real x_target) {
 
+    
+    if (std::abs(x_target - geom.chord) < 1e-7){
+
+        // find my sampling positions
+        const int NSAMPLES = 6; 
+        const Real nSample = 6.0;
+        Real xSamples[NSAMPLES];
+        Real count = 0.0;
+        for (int i = 0; i < NSAMPLES; ++i) {
+            Real frac = 0.96 + (0.985 - 0.96) * count / (nSample-1);
+            xSamples[i] = frac * geom.chord;
+            count += 1.0;
+        }
+
+        // accumulators
+        Real topAccum[7] = {0.0}, botAccum[7] = {0.0};
+
+        for (int i = 0; i < NSAMPLES; ++i) {
+            Real tmpTop[7], tmpBot[7];
+
+            // call the same routine but for each sample location
+            // simplest is to factor your current body into a helper,
+            // but here we inline the code you already have:
+            // -------------------------------------------------------
+            int foundIndexBot = find_interp_position(xcoords, 0, 30, xSamples[i]);
+            int foundIndexTop = find_interp_position(xcoords, Ncoords - 30, Ncoords - 1, xSamples[i]);
+
+            int topIdx[4] = {0}, botIdx[4] = {0}, topN, botN;
+            get_nodes(foundIndexTop, foundIndexBot, xSamples[i], topIdx, topN, botIdx, botN, vsol);
+
+            interp_BL_states(topIdx, botIdx, topN, botN, xSamples[i],
+                             xcoords, states, tmpTop, tmpBot);
+
+            Real dpdxBot = interpolate_dpdx(xcoords, Cps, botIdx, botN, xSamples[i], oper, geom, Uinf);
+            Real dpdxTop = interpolate_dpdx(xcoords, Cps, topIdx, topN, xSamples[i], oper, geom, Uinf);
+
+            // do exactly same post-processing as your original code but using tmpTop/tmpBot:
+            // --- bottom
+            Real ignore;
+            Real UeCorrected = (get_uk(tmpBot[3], param, ignore)) * Uinf;
+            tmpBot[3] = UeCorrected;
+            Real tauMaxBot = (tmpBot[2]*tmpBot[2]) * (oper.rho * (tmpBot[3]*tmpBot[3]));
+            tmpBot[2] = tauMaxBot;
+            tmpBot[4] = dpdxBot;
+            Real cfBot = interpolate_cf(xcoords, states, botIdx, botN, xSamples[i], vsol, param);
+            Real tauWallBot = (cfBot/2) * oper.rho * tmpBot[3]*tmpBot[3];
+            tmpBot[5] = tauWallBot;
+            Real deltaBot = 0.0;
+            if (tauWallBot!=0.0)
+                deltaBot = tmpBot[0]*(3.15 + 1.72/((tmpBot[1]/tmpBot[0])-1)) + tmpBot[1];
+            tmpBot[6] = deltaBot;
+
+            // --- top
+            UeCorrected = (get_uk(tmpTop[3], param, ignore)) * Uinf;
+            tmpTop[3] = UeCorrected;
+            Real tauMaxTop = (tmpTop[2]*tmpTop[2]) * (oper.rho * (tmpTop[3]*tmpTop[3]));
+            tmpTop[2] = tauMaxTop;
+            tmpTop[4] = dpdxTop;
+            Real cfTop = interpolate_cf(xcoords, states, topIdx, topN, xSamples[i], vsol, param);
+            Real tauWallTop = (cfTop/2) * oper.rho * tmpTop[3]*tmpTop[3];
+            tmpTop[5] = tauWallTop;
+            Real deltaTop = 0.0;
+            if (tauWallTop!=0.0)
+                deltaTop = tmpTop[0]*(3.15 + 1.72/((tmpTop[1]/tmpTop[0])-1)) + tmpTop[1];
+            tmpTop[6] = deltaTop;
+
+            // accumulate
+            for (int k = 0; k < 7; ++k) {
+                topAccum[k] += tmpTop[k];
+                botAccum[k] += tmpBot[k];
+            }
+        }
+
+        // average and copy back
+        for (int k = 0; k < 7; ++k) {
+            topBLStates[k] = topAccum[k] / nSample;
+            botBLStates[k] = botAccum[k] / nSample;
+        }
+    }
+
+    else {
+
+    
     //Real x_target = 0.95;
     
     /* State order: theta, delta*, tau_max, Ue, dpdx, tau_wall, delta 99% thickness*/
@@ -285,6 +368,7 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
     }
     
     topBLStates[6] = deltaTop;
+    }
 
 }
 
