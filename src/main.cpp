@@ -250,11 +250,22 @@ bool runCode(
     // if codipack, only use sound code if sound flag on. if not codipack run sound regardless
     
     Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,kinViscInf,doCps,model);
-   
+    
+
+    
    
     std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
     
     # ifndef USE_CODIPACK
+    
+    // check OASPL validity
+    if (std::isnan(OASPL)   // caught NaNs
+        || std::isinf(OASPL)) // caught infs     
+    {
+        converged = false;
+    }
+    
+    
     if (converged){
         json restart;
         restart["states"] = glob.U;
