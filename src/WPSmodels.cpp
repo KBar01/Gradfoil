@@ -343,6 +343,10 @@ void calc_WPS_TNO(
 
     Real phi22[NblPoints];
 
+    Real F[NblPoints];
+    for (int i = 0; i < NblPoints; ++i){
+        F[i] =  L2[i] * (1/Uc) * (dUdy[i] * dUdy[i]) * u22[i];
+    }
 
     for (int w = 0; w < Nsound; ++w)
     {
@@ -354,12 +358,7 @@ void calc_WPS_TNO(
         Real integrand[NblPoints];
         for (int i = 0; i < NblPoints; ++i)
         {
-  
-            Real val = L2[i] * Uc * (dUdy[i] * dUdy[i]) * (u22[i] / (Uc * Uc));
-            val *= phi22[i];
-            val *= std::exp(-2.0 * y[i] * k);
-            
-            integrand[i] = val;
+            integrand[i] = F[i]*phi22[i]*std::exp(-2.0 * y[i] * k);
         }
 
         // trapezoidal integration
@@ -369,11 +368,13 @@ void calc_WPS_TNO(
             Real dy_local = y[i] - y[i - 1];
             integral += 0.5 * (integrand[i] + integrand[i - 1]) * dy_local;
         }
+        
 
-        // Step 3: prefactor
-        Real kfactor = (k1 * k1) / (k * k);
-        Real phi_p = 4.0 * rho * rho * kfactor * integral;
+        // pretty sure this code gives you the wavenumber frequency PSD, 
+        // so convert using same method in R&M : 
 
-        phiqq[w] = phi_p * 2.0;
+        Real ly = 1.4*Uc / omega[w] ;
+
+        phiqq[w] = (4.0 * rho*rho * integral) * M_PI * (1.0/ly) *  2.0;
     }
 }

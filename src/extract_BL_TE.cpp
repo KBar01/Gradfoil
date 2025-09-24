@@ -239,6 +239,9 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
         // accumulators
         Real topAccum[7] = {0.0}, botAccum[7] = {0.0};
 
+        Real NsampleTop = nSample ;
+        Real NsampleBot = nSample ;
+
         for (int i = 0; i < NSAMPLES; ++i) {
             Real tmpTop[7], tmpBot[7];
 
@@ -254,6 +257,14 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
 
             interp_BL_states(topIdx, botIdx, topN, botN, xSamples[i],
                              xcoords, states, tmpTop, tmpBot);
+
+            
+            if (tmpBot[0] == 0.0 && NsampleBot != 1.0){
+                NsampleBot -= 1.0;
+            }
+            if (tmpTop[0] == 0.0 && NsampleTop != 1.0){
+                NsampleTop -= 1.0;
+            }
 
             Real dpdxBot = interpolate_dpdx(xcoords, Cps, botIdx, botN, xSamples[i], oper, geom, Uinf);
             Real dpdxTop = interpolate_dpdx(xcoords, Cps, topIdx, topN, xSamples[i], oper, geom, Uinf);
@@ -297,8 +308,8 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
 
         // average and copy back
         for (int k = 0; k < 7; ++k) {
-            topBLStates[k] = topAccum[k] / nSample;
-            botBLStates[k] = botAccum[k] / nSample;
+            topBLStates[k] = topAccum[k] / NsampleTop;
+            botBLStates[k] = botAccum[k] / NsampleBot;
         }
     }
 
