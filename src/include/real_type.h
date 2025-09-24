@@ -21,7 +21,7 @@
 #define Ncoords 200
 #define Nfine 501
 #define Nin 301
-#define Nsound 500
-#define NblPoints 150
+#define Nsound 250
+#define NblPoints 250
 
 #endif

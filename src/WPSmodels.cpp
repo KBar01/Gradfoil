@@ -207,15 +207,14 @@ void mean_velocity_profile(const Real (&y)[NblPoints],
         Real W = 1-std::cos(M_PI*y[i] / delta);
         
         Real u_plus = (1.0 / kappa) * std::log(y_plus) + B +
-                        0.5*W*((Ue/u_t) - (1/kappa)*std::log((u_t*delta)/nu)-B);
+                        0.5*W*((Ue/u_t) - (1.0/kappa)*std::log((u_t*delta)/nu) - B);
         
         // streamwise velocity
         U[i] = u_plus * u_t;
         // Derivative dU/dy
         // du+/dy:
-        Real duplus_dy = (1.0 / (kappa * y[i])) +
-                        0.5 * ((Ue / u_t) - (1.0 / kappa) * std::log((u_t * delta) / nu) - B) *
-                         (M_PI / delta) * std::sin(M_PI * y[i] / delta);
+        Real duplus_dy = (1.0 / (kappa * y[i])) + 0.5*(M_PI/delta)*std::sin(M_PI*y[i]/delta)*
+                            ((Ue/u_t) - (1/(kappa))*std::log((u_t*delta)/nu) - B );
 
         dUdy[i] = u_t * duplus_dy;
         }
@@ -254,7 +253,7 @@ void Integral_Length_scale(
     Real (&L2)[NblPoints],
     Real (&l_mix)[NblPoints])
 {
-    const Real k = 0.38;
+    const Real k = 0.41;
 
     for (int i = 0; i < NblPoints; ++i)
     {
@@ -283,7 +282,7 @@ void Energy_density_spectrum(
 
         Real ke = 0.7468 / (2*L2[i]);
         Real term = ((beta1*k1)/ke) * ((beta1*k1)/ke);
-        phi22[i] = (4/(9*M_PI)) * ((beta1*beta3)/(ke*ke)) * (term / std::pow(1+term, (7.0/3.0))) ;
+        phi22[i] = (4.0/(9.0*M_PI)) * ((beta1*beta3)/(ke*ke)) * (term / std::pow(1+term, (7.0/3.0))) ;
     }
 }
 
@@ -302,17 +301,33 @@ void calc_WPS_TNO(
     if (tauWall < 0.0) tauWall *= -1.0;
     Real u_t = std::sqrt(tauWall / rho);
 
-    const Real yplus_target = 0.8;  
+    const Real yplus_target = 1.0;  
     Real y_min = yplus_target * nu / u_t;
 
-    //Build wall-normal grid with cosine stretching
+    
+    //Build wall-normal grid with either cosine or linear spacing
     Real y[NblPoints];
     const Real y_max = delta;
+
+    // flag: true = cosine stretching, false = linear spacing
+    bool useCosineStretch = false;
+
     for (int i = 0; i < NblPoints; ++i)
     {
         Real eta = static_cast<Real>(i) / static_cast<Real>(NblPoints - 1);
-        Real y_stretch = 0.5 * (1.0 - std::cos(M_PI * eta));
-        y[i] = y_min + (y_max - y_min) * y_stretch;
+
+        if (useCosineStretch)
+        {
+            // Cosine stretching
+            Real y_stretch = 0.5 * (1.0 - std::cos(M_PI * eta));
+            y[i] = y_min + (y_max - y_min) * y_stretch;
+        }
+        else
+        {
+            // Linear spacing
+            Real y_stretch = eta;  
+            y[i] = y_min + (y_max - y_min) * y_stretch;
+        }
     }
 
     Real Uc = 0.65 * edgeVel;
