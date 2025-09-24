@@ -14,35 +14,30 @@ using json = nlohmann::json;
 void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,const Real delta,const Real tauW,
                     const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound], Real nu,
                     const Oper&oper,const Geom&geom,const Real Uinf,
-                    const Real X,const Real Y,const Real Z,const  Real S,
+                    const Real X,const Real Y,const Real Z,const  Real S,const Real rho,const int isSuction,
                 
                     Real (&WPS)[Nsound]){
  
     if (model == "roz"){
-            calc_WPS_Rozenburg(theta,deltaStar,delta,tauMax,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
+            calc_WPS_Rozenburg(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
         }
     else if (model == "goo")
     {
-        calc_WPS_Goody(theta,deltaStar,delta,tauMax,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
+        calc_WPS_Goody(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
     }
     else if (model == "kam")
     {
-        calc_WPS_Kamruzzaman(theta,deltaStar,delta,tauMax,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,WPS);
+        calc_WPS_Kamruzzaman(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
     }
     else if (model == "tno")
     {
-        calc_WPS_TNO(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,oper.rho,nu,Uinf,geom.chord,WPS);
+        calc_WPS_TNO(delta,tauW,edgeVel,omega,rho,nu,isSuction,WPS);
     }
-
-    //for (int i=0;i<Nsound;++i){
-    //    Spp[i]  = calc_Spp_Freq(340, oper.rho, geom.chord, (Uinf/340), omega[i], X, Y, Z, S, phiqq[i], 0);
-    //    //Spp[i] *= 4 * 2*M_PI;
-    //}
 
 }
 
 Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf,
-    const Real X,const Real Y,const Real Z, const Real S, const Real nu,
+    const Real X,const Real Y,const Real Z, const Real S, const Real nu, const Real rho,
     const int doCps,const std::string& model){
 
     const Real startExp = 2.0; // start exp : 2 (100Hz)
@@ -75,7 +70,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     if (tauMax > 0.0){ 
         
         calc_WPS(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,
-                    omega,nu,oper,geom,Uinf,X,Y,Z,S,WPSUpper);
+                    omega,nu,oper,geom,Uinf,X,Y,Z,S,rho,1,WPSUpper);
     }
     theta = botStates[0];
     deltaS = botStates[1];
@@ -91,7 +86,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
 
     if (tauMax > 0.0){ 
         calc_WPS(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,
-                    omega,nu,oper,geom,Uinf,X,Y,Z,S,WPSLower);
+                    omega,nu,oper,geom,Uinf,X,Y,Z,S,rho,0,WPSLower);
     }
 
     #ifndef USE_CODIPACK

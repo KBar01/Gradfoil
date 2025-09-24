@@ -249,11 +249,9 @@ bool runCode(
     
     // if codipack, only use sound code if sound flag on. if not codipack run sound regardless
     
-    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,kinViscInf,doCps,model);
+    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,kinViscInf,oper.rho,doCps,model);
     
 
-    
-   
     std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
     
     # ifndef USE_CODIPACK

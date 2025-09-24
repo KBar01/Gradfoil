@@ -47,23 +47,43 @@ void calc_WPS_Kamruzzaman(Real theta,
                     Real rho,
                     Real nu,
                     Real Uinf,
-                    Real (&phiqq)[Nsound]){
+                    Real (&phiqq)[Nsound])
+    {
 
-    Real Ue = edgeVel;
-    Real beta_c = std::max((theta/tauWall)*(dpdx),-0.5);
 
+    Real Ue = edgeVel; // will always be non-zero
+    
+    if (tauWall < 0.0){
+        tauWall *= 1.0;
+        if (tauWall < 0.0001) {
+            tauWall = 0.0001;
+        }
+    }
+
+    if (tauMax < 0.0){
+        tauMax *= 1.0;
+        if (tauMax < 0.0001) {
+            tauMax = 0.0001;
+        }
+    }
     
     Real Cf = tauWall/ (0.5*Ue*Ue*rho);
     Real lambda = std::sqrt(2/Cf);
+    Real beta_c = std::max((theta/tauWall)*(dpdx),-1.81);
     Real G = 6.1 * std::sqrt(beta_c+1.81) - 1.7;
-    Real H = 1-G/lambda;
-
-    Real wakeParam = 0.227;
+    
     Real Pi = 0.227;
     if (beta_c > -0.5){
         Pi = 0.8*std::pow(beta_c+0.5, 0.75);
     }
+    
+    Real H = 1-G/lambda;
+    if (H<0.0){
+        H = 0.0;
+    }
+
     Real m = 0.5*std::pow(H/1.31, 0.3);
+
     Real a = 0.45*(1.75*std::pow(Pi*Pi*beta_c*beta_c, m) + 15);
     Real b = 2;
     Real c = 1.637;
@@ -154,262 +174,191 @@ void calc_WPS_Rozenburg(Real theta,
 
 /////////////////////////////////// All TNO Funcs /////////////////////////////////////
 
-Real dcpdxc_from_dpdx(Real dpdx, Real rho, Real Uinf, Real chord)
-{
-    // dpdx = ∂p/∂x in Pa/m
-    // returns ∂Cp/∂(x/c)
-    return (2.0 * chord / (rho * Uinf * Uinf)) * dpdx;
-}
+// this code follows that by Lee:
+/*
+Source Characterization of Turbulent
+Boundary Layer Trailing Edge Noise Using an
+Improved TNO Model
+*/
 
 void mean_velocity_profile(const Real (&y)[NblPoints],
                            Real delta,
                            Real u_t,
                            Real nu,          // fluid kinematic viscosity
-                           Real chord,       // inputs.chord
-                           Real Uinf,
-                           Real rho,
-                           Real dpdx,      // dcpdxc
-                           Real tau_w,       // tau_w
-                           Real delta_s,     // delta_s
+                           Real Ue,
                            Real (&U)[NblPoints],
                            Real (&dUdy)[NblPoints])
 {
-    const Real k = 0.38;
-    const Real B = 5.0;
-
-    Real dcpdxc = dcpdxc_from_dpdx(dpdx,rho,Uinf,chord);
-
-    // dcpdx from nondimensional pressure gradient
-    Real dcpdx = dcpdxc * (1.0 / chord);
-
-    // beta parameter
-    Real beta = (delta_s / tau_w) * dcpdx;
-
-    // wake parameter
-    Real Pi_w = 0.8 * std::pow(beta + 0.5, 0.75);
-
-    // arrays for y_plus and u_plus
-    Real y_plus[NblPoints];
-    Real u_plus[NblPoints];
-
+    const Real kappa = 0.41;
+    const Real B = 5.5;
     for (int i = 0; i < NblPoints; ++i) {
-        y_plus[i] = y[i] * u_t / nu;
+        
+        Real y_plus = y[i] * u_t / nu;
 
-        if (y_plus[i] < 5.0) {
-            // inner layer
-            u_plus[i] = y_plus[i];
-        } else {
-            // outer layer
-            Real outer = (1.0 / k) * std::log(y_plus[i]) + B +
-                         (2.0 * Pi_w / k) *
-                         std::pow(std::sin(M_PI * y[i] / (2.0 * delta)), 2.0);
-            u_plus[i] = outer;
+        if (y_plus <= 5.0){
+            
+            //u_plus = y_plus in viscous sub layer 
+            U[i]  = u_t * y_plus ;
+            // du+/dy = u_t/nu  so  dU/dy = u_t * (u_t/nu) = u_t^2 / nu
+            dUdy[i] = (u_t * u_t) / nu;
         }
+        else{
 
+        Real W = 1-std::cos(M_PI*y[i] / delta);
+        
+        Real u_plus = (1.0 / kappa) * std::log(y_plus) + B +
+                        0.5*W*((Ue/u_t) - (1/kappa)*std::log((u_t*delta)/nu)-B);
+        
         // streamwise velocity
-        U[i] = u_plus[i] * u_t;
-    }
+        U[i] = u_plus * u_t;
+        // Derivative dU/dy
+        // du+/dy:
+        Real duplus_dy = (1.0 / (kappa * y[i])) +
+                        0.5 * ((Ue / u_t) - (1.0 / kappa) * std::log((u_t * delta) / nu) - B) *
+                         (M_PI / delta) * std::sin(M_PI * y[i] / delta);
 
-    // derivative dUdy
-    for (int i = 0; i < NblPoints - 1; ++i) {
-        dUdy[i] = (U[i + 1] - U[i]) / (y[i + 1] - y[i]);
+        dUdy[i] = u_t * duplus_dy;
+        }
     }
-    // last point with backward difference
-    dUdy[NblPoints - 1] =
-        (U[NblPoints - 1] - U[NblPoints - 2]) / (y[NblPoints - 1] - y[NblPoints - 2]);
 }
 
-void velocity_fluctuations(const Real* U,
-                           Real Uref,
-                           Real* u_x,
-                           Real* u_y,
-                           int N)
-{
-    const Real gamma = 64.0;
-    const Real a = 0.2909;
-    const Real b = -0.2598;
+void Turb_shear_stress(
+    
 
-    for (int i = 0; i < N; ++i)
+    // calculate turbulent shear stress term u2^2 bar
+    const Real (&dUdy)[NblPoints],
+    const Real (&l_mix)[NblPoints],
+    const int isSuction,
+    Real (&u22)[NblPoints])
+{
+   
+    for (int i = 0; i < NblPoints; ++i)
     {
-        Real Ui = U[i];
-        Real Q  = 1.0 - std::exp(-gamma * (1.0 - Ui / Uref));
-        u_x[i]  = Ui * ((a + b * Ui / Uref) * Q);
-        u_y[i]  = 0.5 * u_x[i];
+       Real nu_t = l_mix[i]*l_mix[i]*std::sqrt(dUdy[i]*dUdy[i]);
+       Real kt = std::sqrt((nu_t*nu_t*dUdy[i]*dUdy[i]) / 0.09);
+        
+       if (isSuction){
+        u22[i] = 0.45*kt;
+       }
+       else{
+        u22[i] = 0.3*kt;
+       }
     }
 }
 
 void Integral_Length_scale(
-    Real delta,
+
+    // calc vertical integral length scale L_2
+    const Real delta,
     const Real (&y)[NblPoints],
-    Real (&gamma_y_vv)[NblPoints],
-    Real (&gamma_x_uu)[NblPoints])
+    Real (&L2)[NblPoints],
+    Real (&l_mix)[NblPoints])
 {
     const Real k = 0.38;
 
     for (int i = 0; i < NblPoints; ++i)
     {
-        Real l_mix = 0.085 * delta * std::tanh((k / 0.085) * y[i] / delta);
-        gamma_y_vv[i] = l_mix / k;
-        gamma_x_uu[i] = 2.0 * gamma_y_vv[i]; // isotropic turbulence assumption
+        l_mix[i] = (0.085 * delta * std::tanh( (k*y[i]) / (0.085*delta))) /
+                        std::sqrt( std::pow(1+5.5*(y[i]/delta), 6.0) );
+        
+        L2[i] = l_mix[i] / 0.41 ;
     }
 }
 
 
-// Compute velocity spectrum at each BL location and frequency
-void velocity_spectrum(
-    const Real (&gamma_x_uu)[NblPoints],  // integral length scale at each y
-    const Real (&omega)[Nsound],          // angular frequencies
-    Real Uinf,                            // free stream velocity (inputs.U)
-    Real (&phi_uu)[NblPoints][Nsound],    // output
-    Real (&phi_vv)[NblPoints][Nsound],    // output
-    Real (&kx)[Nsound])                   // streamwise wave number
+
+void Energy_density_spectrum(
+    
+    // calculating phi22 for midspan observer in far-field
+
+    const Real k1,
+    const Real (&L2)[NblPoints],
+    Real (&phi22)[NblPoints])
 {
-    const Real beta_x = 1.0;
-    const Real beta_z = 0.75;
 
-    // constant convective velocity
-    Real Uc = 0.7 * Uinf;
+    Real beta1 = 1.0;
+    Real beta3 = 0.75;
 
-    // precompute kx
-    for (int n = 0; n < Nsound; ++n)
-        kx[n] = omega[n] / Uc;
+    for (int i=0;i<NblPoints;++i){
 
-    // ratio of gamma functions
-    const Real gamma_ratio = std::tgamma(5.0/6.0) / std::tgamma(1.0/3.0);
-    const Real coeff_uu = gamma_ratio / (std::sqrt(M_PI) * std::tgamma(1.0/3.0));
+        Real ke = 0.7468 / (2*L2[i]);
+        Real term = ((beta1*k1)/ke) * ((beta1*k1)/ke);
+        phi22[i] = (4/(9*M_PI)) * ((beta1*beta3)/(ke*ke)) * (term / std::pow(1+term, (7.0/3.0))) ;
+    }
+}
 
+
+void calc_WPS_TNO(
+    const Real delta,
+    Real tauWall,
+    const Real edgeVel,
+    const Real (&omega)[Nsound],
+    const Real rho,
+    const Real nu,
+    const int isSuction,
+    Real (&phiqq)[Nsound])
+{
+    // Compute shear velocity and min y from target y+
+    if (tauWall < 0.0) tauWall *= -1.0;
+    Real u_t = std::sqrt(tauWall / rho);
+
+    const Real yplus_target = 0.8;  
+    Real y_min = yplus_target * nu / u_t;
+
+    //Build wall-normal grid with cosine stretching
+    Real y[NblPoints];
+    const Real y_max = delta;
     for (int i = 0; i < NblPoints; ++i)
     {
-        Real ke = (std::sqrt(M_PI) / gamma_x_uu[i]) * gamma_ratio;
-
-        for (int n = 0; n < Nsound; ++n)
-        {
-            Real kx_over_ke = (beta_x * kx[n]) / ke;
-
-            // phi_uu
-            Real denom = std::pow(1.0 + kx_over_ke * kx_over_ke, 5.0/6.0);
-            phi_uu[i][n] = coeff_uu * (beta_x / ke) * (1.0 / denom);
-
-            // phi_vv
-            Real denom2 = std::pow(1.0 + kx_over_ke * kx_over_ke, 7.0/3.0);
-            phi_vv[i][n] = (4.0 / (9.0 * M_PI))
-                         * (beta_x * beta_z / (ke * ke))
-                         * (kx_over_ke * kx_over_ke)
-                         / denom2;
-        }
-    }
-}
-
-void spanwise_correlation_length(
-    const Real (&omega)[Nsound], // angular frequencies
-    Real Uc,                     // convective velocity
-    Real (&gamma_p_z)[Nsound])   // output
-{
-    const Real bc = 1.4;
-    for (int n = 0; n < Nsound; ++n)
-    {
-        if (omega[n] > 0.0)
-            gamma_p_z[n] = bc * Uc / omega[n];
-        else
-            gamma_p_z[n] = 0.0; // avoid division by zero
-    }
-}
-
-
-void Point_spectrum(
-    const Real (&U)[NblPoints],
-    const Real (&dUdy)[NblPoints],
-    const Real (&u_y)[NblPoints],
-    const Real (&gamma_y_vv)[NblPoints],
-    const Real (&phi_vv)[NblPoints][Nsound], // phi_vv(y,f)
-    const Real (&gamma_p_z)[Nsound],
-    Real Uc,                                  // convective velocity
-    const Real (&omega)[Nsound],
-    const Real (&y)[NblPoints],
-    Real rho,
-    Real kx[Nsound],                          // kx for each frequency
-    Real Uinf,                                // freestream speed (inputs.U)
-    Real (&Pi_w)[Nsound])                     // output
-{
-    // compute local convective velocity profile Uc_y(y)
-    Real Uc_y[NblPoints];
-    for (int j = 0; j < NblPoints; ++j)
-    {
-        Uc_y[j] = (Uc / Uinf) * U[j];
+        Real eta = static_cast<Real>(i) / static_cast<Real>(NblPoints - 1);
+        Real y_stretch = 0.5 * (1.0 - std::cos(M_PI * eta));
+        y[i] = y_min + (y_max - y_min) * y_stretch;
     }
 
-    for (int i = 0; i < Nsound; ++i)
-    {
-        // Build temp(y)
-        Real temp[NblPoints];
-        for (int j = 0; j < NblPoints; ++j)
-        {
-            Real expTerm = std::exp(-2.0 * std::abs(kx[i]) * y[j]);
-            Real num = gamma_y_vv[j] * Uc_y[j] * dUdy[j] * dUdy[j] * (u_y[j] * u_y[j]);
-            Real den = (Uc_y[j] * Uc_y[j]);
-            temp[j] = (num / den) * phi_vv[j][i] * expTerm;
-        }
+    Real Uc = 0.65 * edgeVel;
 
-        // trapz integration over y
-        Real integral = 0.0;
-        for (int j = 0; j < NblPoints - 1; ++j)
-        {
-            Real dy = y[j + 1] - y[j];
-            integral += 0.5 * dy * (temp[j] + temp[j + 1]);
-        }
-
-        Pi_w[i] = (4.0 * M_PI * rho * rho / gamma_p_z[i]) * integral;
-    }
-}
-
-void calc_WPS_TNO(Real theta,
-                    Real deltaS,
-                    Real delta,
-                    Real tauWall,
-                    Real tauMax,
-                    Real edgeVel,
-                    Real dpdx,
-                    const Real (&omega)[Nsound],
-                    Real rho,
-                    Real nu,
-                    Real Uinf,
-                    Real chord,
-                    Real (&phiqq)[Nsound]){
-    
-    // 2. Linspace y array
-    Real y[NblPoints];
-    Real dy = (delta - 0.0001) / (NblPoints - 1);
-    for (int i = 0; i < NblPoints; ++i) {
-        y[i] = 0.0001 + i * dy;
-    }
-
-    // 3. Arrays for intermediate results
     Real U[NblPoints], dUdy[NblPoints];
-    Real u_x[NblPoints], u_y[NblPoints];
-    Real gamma_y_vv[NblPoints], gamma_x_uu[NblPoints];
-    Real phi_uu[NblPoints][Nsound], phi_vv[NblPoints][Nsound];
-    Real kx[Nsound], gamma_p_z[Nsound];
+    mean_velocity_profile(y, delta, u_t, nu, edgeVel, U, dUdy);
 
-    Real u_t = std::sqrt(tauWall/rho);
+    Real L2[NblPoints], l_mix[NblPoints];
+    Integral_Length_scale(delta, y, L2, l_mix);
 
-    //mean velocity profile 
-    mean_velocity_profile(y,delta,u_t,nu,chord,Uinf,rho,dpdx,tauWall,deltaS,U,dUdy);
+    Real u22[NblPoints];
+    Turb_shear_stress(dUdy, l_mix, isSuction, u22);
 
-   
-    velocity_fluctuations(U,Uinf,u_x,u_y,NblPoints);
+    Real phi22[NblPoints];
 
-    Integral_Length_scale(delta, y, gamma_y_vv, gamma_x_uu);
-    
-    velocity_spectrum(gamma_x_uu,omega,Uinf,phi_uu,phi_vv,kx);
-    
-    Real Uc = 0.7*Uinf ;
-    spanwise_correlation_length(omega,Uc,gamma_p_z);
 
-    Real Pi_w[Nsound];
-    Point_spectrum(U,dUdy,u_y,gamma_y_vv,phi_vv,gamma_p_z,Uc,omega,y,rho,kx,Uinf,Pi_w);
-    
-    for (int n=0;n<Nsound;++n){
-        phiqq[n] = Pi_w[n]*2.0;
+    for (int w = 0; w < Nsound; ++w)
+    {
+        Real k1 = omega[w] / Uc;
+        Real k = std::abs(k1);
+
+        Energy_density_spectrum(k1, L2, phi22);
+
+        Real integrand[NblPoints];
+        for (int i = 0; i < NblPoints; ++i)
+        {
+  
+            Real val = L2[i] * Uc * (dUdy[i] * dUdy[i]) * (u22[i] / (Uc * Uc));
+            val *= phi22[i];
+            val *= std::exp(-2.0 * y[i] * k);
+            
+            integrand[i] = val;
+        }
+
+        // trapezoidal integration
+        Real integral = 0.0;
+        for (int i = 1; i < NblPoints; ++i)
+        {
+            Real dy_local = y[i] - y[i - 1];
+            integral += 0.5 * (integrand[i] + integrand[i - 1]) * dy_local;
+        }
+
+        // Step 3: prefactor
+        Real kfactor = (k1 * k1) / (k * k);
+        Real phi_p = 4.0 * rho * rho * kfactor * integral;
+
+        phiqq[w] = phi_p * 2.0;
     }
-
 }
