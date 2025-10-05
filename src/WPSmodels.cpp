@@ -371,7 +371,7 @@ void calc_WPS_TNO(
         
 
         // pretty sure this code gives you the wavenumber frequency PSD, 
-        // so convert using same method in R&M : 
+        // so convert using same method in R&M with span corr length: 
 
         Real ly = 1.4*Uc / omega[w] ;
 
