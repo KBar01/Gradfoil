@@ -22,7 +22,8 @@ class BuildWithCMake(build_py):
         # 2. Copy executables into the Python package
         output_bin_dir = os.path.join("gradfoil", "bin")
         os.makedirs(output_bin_dir, exist_ok=True)
-        shutil.copy(os.path.join(build_dir, "CFoil_fwd"), output_bin_dir)
+        shutil.copy(os.path.join(build_dir, "CFoil_fwd_double"), output_bin_dir)
+        shutil.copy(os.path.join(build_dir, "CFoil_fwd_codi"), output_bin_dir)
         shutil.copy(os.path.join(build_dir, "CFoil_AD"), output_bin_dir)
         
         # 3. Continue with the normal Python build
