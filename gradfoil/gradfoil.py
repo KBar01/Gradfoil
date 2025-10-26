@@ -8,11 +8,12 @@ from .xfoilExtract import xfoil_start_run
 
 # Dynamically locate the installed executable path (in gradfoil/bin/)
 BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
-EXEC_FWD = os.path.join(BIN_DIR, "CFoil_fwd")
+EXEC_FWD = os.path.join(BIN_DIR, "CFoil_fwd_double")
+EXEC_FWD_codi = os.path.join(BIN_DIR, "CFoil_fwd_codi")
 EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
 
 
-def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,model,rho,nu):
+def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,ncrit,custUinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,force,lateRestart,lateRestartNorm):
     
 
     cwd = os.getcwd()
@@ -25,16 +26,17 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         "Ma":            Ma,
         "rho":           rho,
         "nu":            nu,
-        "restart":       0,
-        "xfoilstart":    0,
-        "xfoilgetpoints":0,
+        "restart":        0,
+        "fwdCodiRestart": 0,
+        "ADrestart":      0,
+        "lateRestart":    lateRestart,
+        "lateRestartNorm": lateRestartNorm,
         "sampleTE":      sampleTE,
         "X":             X,
         "Y":             Y,
         "Z":             Z,
         "S":             S,
-        "Uinf":          Uinf,
-        "custUinf":      custUinf,
+        "Uinf":      custUinf,
         "returnData":    returnFoilCps,
         "ncrit":         ncrit,
         "Ufac":          Ufac,
@@ -45,14 +47,13 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         "model":  model
     }
 
-    # Write JSON input
+    # Write JSON input file
     with open(in_json_path, "w") as f:
         json.dump(data, f)
 
-    # Run the executable for first time, no restarting
-    initResult = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
+    # Run the executable for first time, no restarting, use codi version to ensure output match to AD version of code
+    initResult = subprocess.run([EXEC_FWD_codi],cwd=os.getcwd(), capture_output=True, text=True)
     initConvergence = initResult.returncode
-
     if initConvergence:
         return True
 
@@ -63,7 +64,6 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
     small_step = 0.5
     back_converged = False
     completed = False
-    
     
     # Determine stepping direction based on sign of alphaDeg
     if alphaDeg >= 0:
@@ -94,7 +94,7 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         with open(in_json_path, "w") as f:
             json.dump(data, f)
 
-        # Attempt run
+        # Attempt run, use fwd_double version to be quicker 
         result = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
         if result.returncode == 1:
             print(f"Backstep converged at {tempalf}")
@@ -128,12 +128,41 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
         with open(in_json_path, "w") as f:
             json.dump(data, f, indent=4)
 
+        # Rename restart.json to prevRestart.json before running the executable
+        restart_path = os.path.join(os.getcwd(), "restart.json")
+        prev_restart_path = os.path.join(os.getcwd(), "prevRestart.json")
+
+        if os.path.exists(restart_path):
+            # If a previous prevRestart.json exists, remove it to avoid clutter
+            if os.path.exists(prev_restart_path):
+                os.remove(prev_restart_path)
+            os.rename(restart_path, prev_restart_path)
+
         result = subprocess.run([EXEC_FWD], cwd=os.getcwd(), capture_output=True, text=True)
         converged = result.returncode == 1
 
         if converged:
             if abs(fwdalf - alphaDeg) < 1e-3:
-                completed = True
+                
+                with open(in_json_path, "r") as f:
+                    data = json.load(f)
+                data["fwdCodiRestart"] = 1
+                data["restart"] = 0
+                with open(in_json_path, "w") as f:
+                    json.dump(data, f, indent=4)
+                
+                result = subprocess.run([EXEC_FWD_codi], cwd=os.getcwd(), capture_output=True, text=True)
+
+                with open(in_json_path, "r") as f:
+                    data = json.load(f)
+                data["restart"] = 0
+                data["fwdCodiRestart"] = 0
+                data["ADrestart"] = 1
+                with open(in_json_path, "w") as f:
+                    json.dump(data, f, indent=4)
+                    converged = result.returncode == 1
+                    completed = converged
+                
                 break
             else:
                 
@@ -156,22 +185,24 @@ def standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,
 
         overallCount += 1
 
-    # Optional fallback to XFOIL
-    if (not completed) and (xfoilPath is not None):
-        print("Falling back to XFOIL for initialization...")
-        completed = xfoil_start_run(alphaDeg,Re,Ma,xcoords,ycoords,sampleTE,X,Y,Z,S,EXEC_FWD,xfoilPath,Uinf,custUinf,trackCLs,ncrit)
-
     return completed
     
 
 
 
-def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5,xfoilPath=None,xfoilStart=0,Uinf=1,custUinf=0,trackCLs=0,returnFoilCps=0,ncrit=9.0,Ufac=2.5,TEfac=0.06,toptrans=0.5,bottrans=0.5,forcetrans=0,rho=1.225,nu=1.789e-5,repanel=1,model="kam"):
+def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,
+            sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5, model="kam",
+            rho=1.225, nu=1.789e-5, Uinf=0,ncrit=9.0,
+            Ufac=1.0,TEfac=0.09, repanel=0,
+            toptrans=0.5,bottrans=0.5,forcetrans=0,
+            returnFoilCps=0,lateRestart=0,lateRestartNorm=1e-5):
     
     
-
+    #xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,ncrit,custUinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,force,lateRestart,lateRestartNorm
     if repanel:
-        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,forcetrans,model,rho,nu)
+        success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
+                               sampleTE,observerX,observerY,observerZ,span,model,
+                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm)
 
         if success:
             return success
@@ -180,7 +211,9 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
             for uf, tef in [(1.8,0.1), (2.1,0.09), (2.6,0.09), (1.0,0.09), (1.0,1.1), (1.5,0.09)]:
                 
                 print('trying different panel distribution ('+str(count)+'/6)')
-                success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,uf,tef,toptrans,bottrans,forcetrans,model,rho,nu)
+                success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
+                               sampleTE,observerX,observerY,observerZ,span,model,
+                               rho,nu,ncrit,Uinf,returnFoilCps,uf,tef,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm)
                 if success:
                     break
                 count +=1
@@ -188,17 +221,12 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,sampleTE=0.95,observerX=0.0,o
             return success
     
     else:
-        success = standard_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,observerX,observerY,observerZ,span,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,forcetrans,model,rho,nu)
+        success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
+                               sampleTE,observerX,observerY,observerZ,span,model,
+                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm)
         return success
     
 
-
-
-def xfoil_run(xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,custNcrits,topncrit,botncrit,breakloopInt):
-
-    success = xfoil_start_run(EXEC_FWD,xcoords,ycoords,alphaDeg,Re,Ma,sampleTE,X,Y,Z,S,xfoilPath,Uinf,custUinf,trackCLs,returnFoilCps,ncrit,Ufac,TEfac,toptrans,bottrans,force,custNcrits,topncrit,botncrit,breakloopInt)
-
-    return success
 
 def grad_run():
     # Run the AD version of the code, using known solution from fwd run
