@@ -4,33 +4,14 @@ cmake_minimum_required(VERSION 3.14)
 project(gradFoil)
 
 set(CMAKE_CXX_STANDARD 17)
+
+# Default build type
+
 set(CMAKE_BUILD_TYPE Release)
-
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -fno-fast-math")
-  #-fno-strict-aliasing
-endif()
-
-option(DO_BL_GRADIENT "Enable boundary layer gradient calculation" OFF)
-option(DO_SOUND "Enable calculation of TE sound" ON)
-
-if(DO_BL_GRADIENT)
-  set(DO_BL_GRADIENT_DEFINE 1)
-else()
-  set(DO_BL_GRADIENT_DEFINE 0)
-endif()
-
-if(DO_SOUND)
-  set(DO_SOUND_DEFINE 1)
-else()
-  set(DO_SOUND_DEFINE 0)
-endif()
-
-
 include(FetchContent)
 
 #############################################
-# Fetch Eigen (header-only)
+# Dependencies
 #############################################
 FetchContent_Declare(
   eigen
@@ -39,92 +20,106 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(eigen)
 
-#############################################
-# Fetch CoDiPack (header-only)
-#############################################
-
 FetchContent_Declare(
   codipack
   GIT_REPOSITORY https://github.com/SciCompKL/CoDiPack.git
-  GIT_TAG master  # use a specific commit/tag if needed
+  GIT_TAG master
 )
 FetchContent_MakeAvailable(codipack)
-
-#############################################
-# Fetch json (header-only)
-#############################################
 
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
 FetchContent_MakeAvailable(json)
 
 #############################################
-# Include your own headers
+# Includes
 #############################################
-# Common include directory for all targets (if needed)
 set(COMMON_INCLUDES ${PROJECT_SOURCE_DIR}/src/include)
 set(NOISE_INCLUDES ${PROJECT_SOURCE_DIR}/src/noise_includes)
-#include_directories(${PROJECT_SOURCE_DIR}/src/include)
-
-# Include CoDiPack manually (header-only)
-#include_directories(${codipack_SOURCE_DIR}/include)
 
 #############################################
-# Gather source files
+# Sources
 #############################################
 file(GLOB_RECURSE SOURCES src/*.cpp)
 list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
-
-
 #############################################
-# Build Executables
+# Executable
 #############################################
+add_executable(CFoil_fwd_double src/main.cpp ${SOURCES})
 
+target_link_libraries(CFoil_fwd_double PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
 
-# Issue with custom derivative rules and codipack vector mode means
-# generating 2 seperate AD scripts when doing OASPL gradient
-#
-# When DO_SOUND= true : 
-# Cfoil_Noise returns just gradient of OASPL and Cfoil_AD retuns
-# gradient of CL and CD
-
-
-
-################## FWD MODE: includes everything ###############################################
-add_executable(CFoil_fwd src/main.cpp ${SOURCES})
-
-target_link_libraries(CFoil_fwd Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
-
-target_include_directories(CFoil_fwd PRIVATE
+target_include_directories(CFoil_fwd_double PRIVATE
  ${COMMON_INCLUDES}
  ${NOISE_INCLUDES}
+ ${codipack_SOURCE_DIR}/include
 )
 
-target_compile_definitions(CFoil_fwd PRIVATE
+target_compile_definitions(CFoil_fwd_double PRIVATE
   -DCODI_EnableEigen
-  -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
-  -DDO_SOUND=${DO_SOUND_DEFINE}
+  -DFWD_DOUBLE_VERSION
 )
 
-
-################### NOISE AD CODE (only if DO_SOUND=ON) ##########################################
-
-  
-  add_executable(CFoil_AD src/main.cpp ${SOURCES})
-  
-  target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
-  
-  target_include_directories(CFoil_AD PRIVATE
-  
-    ${COMMON_INCLUDES}
-    ${NOISE_INCLUDES} 
-    ${codipack_SOURCE_DIR}/include
+#############################################
+# Compiler flags
+#############################################
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  target_compile_options(CFoil_fwd_double PRIVATE 
+    -O2
+    -fno-fast-math
   )
-  
-  target_compile_definitions(CFoil_AD PRIVATE
-    -DUSE_CODIPACK
-    -DCODI_EnableEigen
-    -DCODI_ForcedInlines
-    -DDO_BL_GRADIENT=0
-    -DDO_SOUND=1
+endif()
+
+
+########### fwd using codi ###########################
+
+
+add_executable(CFoil_fwd_codi src/main.cpp ${SOURCES})
+
+target_link_libraries(CFoil_fwd_codi PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
+
+target_include_directories(CFoil_fwd_codi PRIVATE
+ ${COMMON_INCLUDES}
+ ${NOISE_INCLUDES}
+ ${codipack_SOURCE_DIR}/include
+)
+
+target_compile_definitions(CFoil_fwd_codi PRIVATE
+  -DUSE_CODIPACK
+  -DCODI_EnableEigen
+  -DFWD_CODI_VERSION
+)
+
+#############################################
+# Compiler flags
+#############################################
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  target_compile_options(CFoil_fwd_codi PRIVATE 
+    -O2
+    -fno-fast-math
   )
+endif()
+
+########### AD using codi ###########################
+
+
+add_executable(CFoil_AD src/main.cpp ${SOURCES})
+target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
+target_include_directories(CFoil_AD PRIVATE
+ ${COMMON_INCLUDES}
+ ${NOISE_INCLUDES}
+ ${codipack_SOURCE_DIR}/include
+)
+target_compile_definitions(CFoil_AD PRIVATE
+  -DUSE_CODIPACK
+  -DCODI_EnableEigen
+  -DAD_VERSION
+)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  target_compile_options(CFoil_AD PRIVATE 
+    -O2
+    -fno-fast-math
+  )
+endif()
+
+#############################################

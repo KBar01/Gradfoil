@@ -68,35 +68,36 @@ void errFunc(Real in_r,Real in_i, Real &out_r, Real &out_i){
 
     
     # ifdef USE_CODIPACK
-    double x_val = in_r.getValue() ;
-    double y_val = in_i.getValue() ;
-    complex<double> z(x_val,y_val) ;
-    complex<double> w = Faddeeva::erf(z);
-    
-    std::complex<double> dw_dz = (2.0 / sqrt(M_PI)) * exp(-z * z); // Derivative
+        double x_val = in_r.getValue() ;
+        //double x_val = in_r ;
+        double y_val = in_i.getValue() ;
+        //double y_val = in_i ;
+        complex<double> z(x_val,y_val) ;
+        complex<double> w = Faddeeva::erf(z);
+        
+        std::complex<double> dw_dz = (2.0 / sqrt(M_PI)) * exp(-z * z); // Derivative
 
-    // Compute real and imag parts of Jacobian
-    double du_dx = dw_dz.real();        // ∂Re(w)/∂x
-    double du_dy = -dw_dz.imag();       // ∂Re(w)/∂y
-    double dv_dx = dw_dz.imag();        // ∂Im(w)/∂x
-    double dv_dy = dw_dz.real();        // ∂Im(w)/∂y
-    
-    // Push statement for u = Re(w)
-    codi::StatementPushHelper<Real> ph;
-    ph.startPushStatement();
-    ph.pushArgument(in_r, du_dx);
-    ph.pushArgument(in_i, du_dy);
-    ph.endPushStatement(out_r, w.real());
+        // Compute real and imag parts of Jacobian
+        double du_dx = dw_dz.real();        // ∂Re(w)/∂x
+        double du_dy = -dw_dz.imag();       // ∂Re(w)/∂y
+        double dv_dx = dw_dz.imag();        // ∂Im(w)/∂x
+        double dv_dy = dw_dz.real();        // ∂Im(w)/∂y
+        
+        // Push statement for u = Re(w)
+        codi::StatementPushHelper<Real> ph;
+        ph.startPushStatement();
+        ph.pushArgument(in_r, du_dx);
+        ph.pushArgument(in_i, du_dy);
+        ph.endPushStatement(out_r, w.real());
 
 
-    // Push statement for v = Im(w)
+        // Push statement for v = Im(w)
 
-    codi::StatementPushHelper<Real> phIm;
-    phIm.startPushStatement();
-    phIm.pushArgument(in_r, dv_dx);
-    phIm.pushArgument(in_i, dv_dy);
-    phIm.endPushStatement(out_i, w.imag());
-
+        codi::StatementPushHelper<Real> phIm;
+        phIm.startPushStatement();
+        phIm.pushArgument(in_r, dv_dx);
+        phIm.pushArgument(in_i, dv_dy);
+        phIm.endPushStatement(out_i, w.imag());
     #else
 
     complex<double> z(in_r,in_i) ;
@@ -106,6 +107,7 @@ void errFunc(Real in_r,Real in_i, Real &out_r, Real &out_i){
     out_i = w.imag();
 
     #endif
+
 
 }
 

@@ -1,18 +1,18 @@
 #ifndef REAL_TYPE_H
 #define REAL_TYPE_H
 
-#ifdef USE_CODIPACK
-    #include <codi.hpp>
-    
-    #if DO_BL_GRADIENT
-    using Real = codi::RealReverseVec<16>;
-    #else
-    using Real = codi::RealReverseVec<3>;
-    #endif
 
+#ifdef AD_VERSION
+    #include <codi.hpp>
+    using Real = codi::RealReverseVec<3>;
+    using Tape = typename Real::Tape;
+#elif FWD_CODI_VERSION
+    #include <codi.hpp>
+    using Real = codi::RealReverse;
     using Tape = typename Real::Tape;
 #else
-    using Real = double;
+using Real = double;
+
 #endif
 
 #define IDX(i,j,nrow) ((i)+(j)*(nrow)) // For col-major access

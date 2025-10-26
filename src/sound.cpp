@@ -89,16 +89,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
                     omega,nu,oper,geom,Uinf,X,Y,Z,S,rho,0,WPSLower);
     }
 
-    #ifndef USE_CODIPACK
     
-    json amiet;
-    if (doCps){
-        amiet["freq"] = Freq;
-        amiet["phiqqupper"] = WPSUpper;
-        amiet["phiqqlower"] = WPSLower;
-    }
-
-    #endif
     
     Real farfieldSpectra[Nsound] ;
     TE_noise_outer((Uinf/340),Uinf,X,Y,Z,geom.chord/2,0.0,geom.chord,S,340,oper.rho,nu,
@@ -115,16 +106,5 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     Real pref2 = (20e-6)*(20e-6); // reference pressure squared
     Real OASPL = 10.0 * std::log10(integral / pref2);
 
-
-    #ifndef USE_CODIPACK
-    if (doCps){
-    
-        amiet["spptotal"]   = farfieldSpectra;
-        std::ofstream amietFile("amiet.json");
-        amietFile << amiet.dump(4);  // pretty print with 4 spaces indentation
-        amietFile.close();
-    }
-
-    #endif
     return OASPL;
 }

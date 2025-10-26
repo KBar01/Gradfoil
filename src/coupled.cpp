@@ -11,6 +11,11 @@
 #include <chrono>
 #include <fstream>
 
+#include "nlohmann/json.hpp"  // nlohmann/json
+
+using json = nlohmann::json;
+
+
 using namespace std::chrono;
 
 
@@ -23,7 +28,7 @@ Real euc_norm(const Real* R, int size) {
     return std::sqrt(sum);
 }
 
-
+/*
 #ifdef USE_CODIPACK
 bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
     Param& param, Vsol& vsol, Isol& isol, Glob& glob, Trans&tdata, const bool force) {
@@ -50,7 +55,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
      
         update_transition(glob, vsol, isol, param, tdata, force);
 
-        build_glob_RV(foil, vsol, isol, glob, param,tdata);
+        build_glob_RV(foil, vsol, isol, glob, param,tdata);  // maybe can remove ????
 
         Real residualNorm = euc_norm(glob.R, Rsize);
 
@@ -63,6 +68,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 }
 
 #else
+*/
 bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
     Param& param, Vsol& vsol, Isol& isol, Glob& glob, Trans&tdata, const bool force) {
 
@@ -71,13 +77,33 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
     constexpr int Rsize = 3*(Ncoords + Nwake);
     constexpr int Rallsize = 4*(Ncoords + Nwake);
 
-    for (int i = 0; i < 70; ++i) {
+    for (int i = 0; i < 60; ++i) {
         
         build_glob_RV(foil, vsol, isol, glob, param,tdata);
         
         Real residualNorm = euc_norm(glob.R, Rsize);
+
+        #ifdef FWD_CODI_VERSION
+            if (glob.doADrestartExtract){
+                if (residualNorm <= glob.ADrestartRnorm){
+                    
+                    json restart;
+                    std::vector<double> states_d(RVdimension);
+                    // Extract numeric values from CoDiPack types
+                    for (size_t i = 0; i < RVdimension; ++i){
+                        states_d[i] = glob.U[i].getValue();
+                    } 
+                    restart["states"] = states_d;
+                    restart["turb"]   = vsol.turb;
+                    std::ofstream restartFile("prevRestart.json");
+                    restartFile << restart.dump(4);  // pretty print with 4 spaces indentation
+                    restartFile.close();
+                    glob.doADrestartExtract = false ;
+                }
+            }
+        #endif
         
-        if ((residualNorm < param.rtol) || (i == param.breakLoop)) {
+        if (residualNorm < param.rtol) {
             
             clear_RV(glob, isol, vsol, foil, param);
             converged = true;
@@ -103,4 +129,4 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
     return converged;
 }
 
-#endif
+//#endif

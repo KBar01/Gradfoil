@@ -1,8 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <Eigen/Dense>
-#include <Eigen/Sparse>
-#include <Eigen/SparseLU>
+
 
 #include <Eigen/LU>
 #include "real_type.h"
@@ -24,21 +23,113 @@
 using namespace std::chrono;
 
 
-#ifndef USE_CODIPACK
+
+
+// === Drop-in sparse solver with full custom gradients for Codipack ===
+// Place inside the #else branch where you currently have the dense QR solve.
+// Requires Eigen (SparseLU) and Codipack headers already included.
+
+#include <vector>
+#include <iostream>
+#include <cassert>
+
+#include <vector>
+#include <iostream>
+#include <cassert>
+#include <Eigen/Sparse>
+#include <Eigen/SparseLU>
+
+
+
+
+
+
+# ifdef USE_CODIPACK
+// helper for column-major indexing
+inline int colMajorIndex(int i, int j, int n) { return i + j * n; }
+
+// 1. Type aliases for sparse Eigen
+template<typename T>
+using MatrixSparse = Eigen::SparseMatrix<T>;
+template<typename T>
+using Vector      = Eigen::Matrix<T, Eigen::Dynamic, 1>;
+
+// 2. Your own solver for the numeric step
+template<typename T>
+void sparseSolveFunc(MatrixSparse<T> const& A, Vector<T> const& rhs, Vector<T>& sol) {
+    // choose your factorization; SparseLU works for general unsymmetric
+    Eigen::SparseLU<MatrixSparse<T>> lu;
+    lu.compute(A);
+    sol = lu.solve(rhs);
+}
+
+// 3. Wrap in CoDiPack's sparse linear system
+template<typename Number>
+struct SparseEigenSolver
+  : public codi::SparseEigenLinearSystem<Number, MatrixSparse, Vector> {
+
+    using Base       = codi::SparseEigenLinearSystem<Number, MatrixSparse, Vector>;
+    using MatrixReal = typename Base::MatrixReal;  // numeric (Real) matrix
+    using VectorReal = typename Base::VectorReal;  // numeric (Real) vector
+
+    void solveSystem(MatrixReal const* A, VectorReal const* b, VectorReal* x) {
+        sparseSolveFunc(*A, *b, *x);  // just delegate to your numeric routine
+    }
+};
+
+// 4. Your driver
+void solve_sys(Glob &glob) {
+    constexpr int Nsize = 4 * (Ncoords + Nwake);
+
+    // build sparse matrix from your glob arrays
+    std::vector<Eigen::Triplet<Real>> triplets;
+    triplets.reserve(glob.R_V_latest);
+    for (int k = 0; k < glob.R_V_latest; ++k) {
+        triplets.emplace_back(glob.R_V_rows[k],
+                              glob.R_V_cols[k],
+                              glob.R_V_vals[k]);
+    }
+
+    MatrixSparse<Real> A(Nsize, Nsize);
+    A.setFromTriplets(triplets.begin(), triplets.end());
+
+    Vector<Real> rhs(Nsize);
+    for (int i = 0; i < Nsize; ++i) rhs(i) = glob.R[i];
+
+    Vector<Real> sol(Nsize);
+
+    // 5. Let CoDiPack handle AD by calling its wrapper:
+    codi::solveLinearSystem(SparseEigenSolver<Real>(), A, rhs, sol);
+
+    // 6. Write solution back into your state
+    for (int i = 0; i < Nsize; ++i) {
+        glob.dU[i] = -sol(i);
+    }
+}
+
+#else
+
 void solve_sys(Glob& glob) {
     constexpr int Nsize = 4 * (Ncoords + Nwake);
 
-    //auto start_total = high_resolution_clock::now();
-    // Map the dense matrix from raw data
-    Eigen::Map<const Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>>
-        A_eigen(glob.R_V, Nsize, Nsize);
+    // === 1. Build triplets from glob arrays ===
+    std::vector<Eigen::Triplet<Real>> triplets;
+    triplets.reserve(glob.R_V_latest);
+    for (int k = 0; k < glob.R_V_latest; ++k) {
+        int row = glob.R_V_rows[k];
+        int col = glob.R_V_cols[k];
+        Real val = glob.R_V_vals[k];
+        if (val != Real(0)) {
+            triplets.emplace_back(row, col, val);
+        }
+    }
 
-    Eigen::Map<const Eigen::Matrix<Real, RVdimension, 1, Eigen::ColMajor>>
-        rhs_eigen(glob.R, Nsize, 1);
-
-    // Convert dense matrix to sparse matrix
+    // === 2. Fill sparse matrix from triplets ===
     Eigen::SparseMatrix<Real> A_sparse(Nsize, Nsize);
-    A_sparse = A_eigen.sparseView();  // Converts dense to sparse
+    A_sparse.setFromTriplets(triplets.begin(), triplets.end());
+    
+    Eigen::Map<const Eigen::Matrix<Real, RVdimension, 1, Eigen::ColMajor>>
+    rhs_eigen(glob.R, Nsize, 1);
 
     // Use SparseLU solver
     Eigen::SparseLU<Eigen::SparseMatrix<Real>> sparse_solver;
@@ -55,80 +146,8 @@ void solve_sys(Glob& glob) {
     Eigen::Map<Eigen::Matrix<Real, RVdimension, 1, Eigen::ColMajor>>
         x_eigen(glob.dU, Nsize, 1);
     x_eigen = x;
-
-    //auto t2 = high_resolution_clock::now();
-    
-    //auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - start_total);
-    //std::cerr << "sparse compute: " << diff.count() << " " << std::endl;
 }
-
-#else
-
-template<typename T>
-using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-template<typename T>
-using Vector = Eigen::Matrix<T, Eigen::Dynamic, 1>;
-
-template<typename Type>
-void func(Matrix<Type> const& A, Vector<Type> const& rhs, Vector<Type>& sol) {
-    
-    sol = A.colPivHouseholderQr().solve(rhs);
-}
- 
-template<typename Number>
-struct EigenSolver : public codi::EigenLinearSystem<Number, Matrix, Vector> {
-  public:
- 
-    using Base = codi::EigenLinearSystem<Number, Matrix, Vector>;  
-    using MatrixReal = typename Base::MatrixReal;                  
-    using VectorReal = typename Base::VectorReal;                  
- 
-    void solveSystem(MatrixReal const* A, VectorReal const* b, VectorReal* x) {
-        func(*A, *b, *x);
-    }
-};
-
-void solve_sys(Glob&glob){
-    
-    
-    constexpr int Nsize = 4 * (Ncoords + Nwake);
-    
-
-    Matrix<Real> A(Nsize, Nsize);
-    Vector<Real> rhs(Nsize);
-    Vector<Real> sol(Nsize);
-
-    // Map the raw data to the Eigen matrices
-    for (int i = 0; i < Nsize; ++i) {
-        for (int j = 0; j < Nsize; ++j) {
-            A(i, j) = glob.R_V[colMajorIndex(i, j, Nsize)];
-        }
-        rhs(i) = glob.R[i];
-    }
-
-    // Note: x here is a Eigen matrix 
-    codi::solveLinearSystem(EigenSolver<Real>(), A, rhs, sol);
-    
-    for (int i=0;i<Nsize;++i){
-        glob.dU[i] = -sol(i);
-    }
-}
-
 #endif
-
-void writeArrayToCSV(const std::string& filename, const double* array, int size) {
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open file " << filename << " for writing.\n";
-        return;
-    }
-
-    for (int i = 0; i < size; ++i) {
-        file << array[i] << "\n";
-    }
-
-    file.close();
-}
 
 
 void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const Oper& oper) {
@@ -171,7 +190,14 @@ void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const 
 
         int colindex = 4*col + 3;
         for (int row = 0;row<Nsys;++row){
-            glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] = (row == col ? 1.0 : 0.0) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
+            
+            //glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] = (row == col ? 1.0 : 0.0) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
+            
+            Real zero = 0.0;
+            glob.R_V_vals[glob.R_V_latest] = (row == col ? 1.0 : zero) - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ds[col];
+            glob.R_V_rows[glob.R_V_latest] = rowStart+row;
+            glob.R_V_cols[glob.R_V_latest] = colindex;
+            glob.R_V_latest += 1 ;
         }
     }
 
@@ -180,7 +206,11 @@ void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const 
 
         int colindex = 4*col + 1;
         for (int row = 0;row<Nsys;++row){
-            glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] =  - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ue[col];
+            //glob.R_V[colMajorIndex(rowStart+row,colindex,4*Nsys)] =  - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ue[col];
+            glob.R_V_vals[glob.R_V_latest] = - vsol.ue_m[colMajorIndex(row,col,Nsys)]*ue[col];
+            glob.R_V_rows[glob.R_V_latest] = rowStart+row;
+            glob.R_V_cols[glob.R_V_latest] = colindex;
+            glob.R_V_latest += 1 ;
         }
     }
 

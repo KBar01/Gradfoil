@@ -11,8 +11,6 @@
 
 
 
-
-
 void stagnation_state(const Real*U1,const Real*U2,const Real x1,const Real x2,
     Real (&Ust)[4],Real (&Ust_U)[32],Real (&Ust_x)[8],Real&xst){
 
@@ -72,6 +70,90 @@ void stagnation_state(const Real*U1,const Real*U2,const Real x1,const Real x2,
 }
 
 
+void equate_block_inplace_sparse(
+    Glob &glob,
+    int startEntryRow, int startEntryCol,         // top-left of block in global matrix
+    const Real* blockToInsert,                       // pointer to source block
+    int blockLd,                                  // leading dimension (rows) of source block
+    int blockStartRow, int blockStartCol,         // starting offset inside source block
+    int nRowsInsert, int nColsInsert)             // size of block to insert
+{
+    // loop over columns (column-major)
+    for (int j = 0; j < nColsInsert; ++j){
+        // pointer to j-th column of source block
+        const Real* src = blockToInsert + (blockStartCol + j)*blockLd + blockStartRow;
+        int globalCol = startEntryCol + j;
+
+        for (int i = 0; i < nRowsInsert; ++i){
+            int globalRow = startEntryRow + i;
+            Real val = src[i];
+
+            // accumulate if we’ve already inserted this (row,col)
+            //bool found = false;
+            //for (int k = glob.R_V_latest - 1; k >= 0; --k){
+            //    if (glob.R_V_rows[k] == globalRow && glob.R_V_cols[k] == globalCol){
+            //        glob.R_V_vals[k] += val;
+            //        found = true;
+            //        break;
+            //    }
+            //}
+
+            //if (!found){
+            glob.R_V_rows[glob.R_V_latest] = globalRow;
+            glob.R_V_cols[glob.R_V_latest] = globalCol;
+            glob.R_V_vals[glob.R_V_latest] = val;
+            glob.R_V_latest += 1;
+            //}
+        }
+    }
+}
+inline void findColumnIndices(
+    const Glob &glob,
+    int colIndex,
+    std::vector<int> &indicesOut)
+{
+    indicesOut.clear();
+    // Reserve a bit to avoid reallocation:
+    indicesOut.reserve(6); // typical number of entries in a column
+    for (int k = 0; k < glob.R_V_latest; ++k){
+        if (glob.R_V_cols[k] == colIndex){
+            indicesOut.push_back(k); // index in vals/rows/cols arrays
+        }
+    }
+}
+
+
+inline void addColumnValues(
+    Glob &glob,
+    int colIndex,
+    const std::vector<int> &existingIndices, // built with findColumnIndices
+    const Real *valsToAdd,                     // array of values to add
+    int nRowsAdd)                           // how many entries to add
+{
+    for (int i = 0; i < nRowsAdd; ++i){
+        int row = i;
+        Real val  = valsToAdd[i];
+
+        // Try to find in existingIndices:
+        bool found = false;
+        for (int idx : existingIndices){
+            if (glob.R_V_rows[idx] == row){
+                glob.R_V_vals[idx] += val;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found){
+            // add new
+            glob.R_V_rows[glob.R_V_latest] = row;
+            glob.R_V_cols[glob.R_V_latest] = colIndex;
+            glob.R_V_vals[glob.R_V_latest] = val;
+            ++glob.R_V_latest;
+        }
+    }
+}
+
 void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, Param&param, Trans&tdata){
     
     constexpr int RVsize = 4*(Ncoords+Nwake);
@@ -88,6 +170,7 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, P
         const int nSurfPoints = Is.size();
 
         // Check for edge case of first node hitting stag point exactly
+        // i0 will be 1 if this happens
         int i0 = ((si < 2) && (xi[Is[0]] < 1e-8 * xi[Is[nSurfPoints-1]])) ? 1 : 0;
 
         bool turb = false, wake=false ; 
@@ -96,10 +179,6 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, P
             
             Real R1[3], R1_U[24], R1_x[6]; // temp storage
             
-            /*
-            if (3*Is[i0] == 280 || 3*Is[i0]+1 == 280 || 3*Is[i0]+2 == 280 ){
-                int nothing_value = 2 + 3+ Is[i0] ;
-            }*/
 
             Real* U1 = &glob.U[colMajorIndex(0,Is[i0],4)];
             Real* U2 = &glob.U[colMajorIndex(0,Is[i0+1],4)];
@@ -118,7 +197,11 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, P
             cnp::matmat_mul<3,4,2>(R1_Ust,Ust_x,R1_x);  // R1_x = R1_Ust @ Ust_x
 
             int J[2] = {Is[i0],Is[i0+1]};
+            
+            /*
+            I AM IGNORING FOR NOW, WILL FIX LATER BY ADDING IT ON THE END
 
+            // handlng the special case of stag on point not panel ///////////////////////////////
             if (i0 == 1) {
 
                 // i0=0 point landed right on stagnation: set value to Ust
@@ -148,6 +231,8 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, P
                     else{R_st[Ig+row] -= secondVal;}
                 }
             }
+            */
+            //////////////////////////////////////////////////////////////////////////////////////////
             
             int Ig = 3*Is[i0];
             for (int row=0;row<3;++row){glob.R[Ig+row] = R1[row];}
@@ -155,10 +240,13 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, P
             // here as well, swapping out the Rx build to build R_st directly
             for (int j = 0; j < 2; ++j){
                 
-                cnp::equate_block_inplace(glob.R_V,RVsize,Ig,4*J[j],R1_U,3,0,4*j,3,4);
+                //cnp::equate_block_inplace(glob.R_V,RVsize,Ig,4*J[j],R1_U,3,0,4*j,3,4);
+                equate_block_inplace_sparse(glob,Ig,4*J[j],R1_U,3,0,4*j,3,4);
+
+                
                 //cnp::equate_block_inplace(glob.R_x,RXsize,Ig,J[j],R1_x,3,0,j,3,1); //TODO seperate out into two things as J not ordered
             }
-
+            
             for (int row=0;row<3;++row){
                     
                 Real firstVal = R1_x[colMajorIndex(row,0,3)];
@@ -179,7 +267,8 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, P
             for (int row=0;row<3;++row){glob.R[Ig+row] = R1[row];}
 
             for (int j = 0; j < 3; ++j){
-                cnp::equate_block_inplace(glob.R_V,RVsize,Ig,4*J[j],R1_U,3,0,4*j,3,4);
+                //cnp::equate_block_inplace(glob.R_V,RVsize,Ig,4*J[j],R1_U,3,0,4*j,3,4);
+                equate_block_inplace_sparse(glob,Ig,4*J[j],R1_U,3,0,4*j,3,4);
             }
 
             wake = true;
@@ -229,8 +318,11 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, P
             for (int j = 0; j < 3; ++j){glob.R[Ig + j] += Ri[j];}
             
             // update R_U (or R_V in this case)
-            cnp::equate_block_inplace(glob.R_V,RVsize,Ig,4*Is[i-1],Ri_U,3,0,0,3,4);
-            cnp::equate_block_inplace(glob.R_V,RVsize,Ig,4*Is[i  ],Ri_U,3,0,4,3,4);
+            //cnp::equate_block_inplace(glob.R_V,RVsize,Ig,4*Is[i-1],Ri_U,3,0,0,3,4);
+            equate_block_inplace_sparse(glob,Ig,4*Is[i-1],Ri_U,3,0,0,3,4);
+
+            //cnp::equate_block_inplace(glob.R_V,RVsize,Ig,4*Is[i  ],Ri_U,3,0,4,3,4);
+            equate_block_inplace_sparse(glob,Ig,4*Is[i  ],Ri_U,3,0,4,3,4);
 
             // Swap out for building Rs_t directly instead of R_x build first:
             for (int row=0;row<3;++row){
@@ -252,16 +344,22 @@ void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, P
 
     cnp::scalar_mul_inplace<RXsize>(R_st,isol.sstag_ue[0]);
 
-    Real* rvColPointer = &glob.R_V[colMajorIndex(0,(4*isol.stagIndex[0] + 3),RVsize)];
-    cnp::add_inplace<RXsize>(rvColPointer,R_st);
+    //Real* rvColPointer = &glob.R_V[colMajorIndex(0,(4*isol.stagIndex[0] + 3),RVsize)];
+    //cnp::add_inplace<RXsize>(rvColPointer,R_st);
+    std::vector<int> colIdxList;
+    findColumnIndices(glob, (4*isol.stagIndex[0] + 3), colIdxList);
+    addColumnValues(glob, (4*isol.stagIndex[0] + 3), colIdxList, R_st, 3*(Ncoords+Nwake));
+
 
     Real scale = isol.sstag_ue[1] / isol.sstag_ue[0] ;
 
     cnp::scalar_mul_inplace<RXsize>(R_st,scale);
 
-    rvColPointer = &glob.R_V[colMajorIndex(0,(4*isol.stagIndex[1] + 3),RVsize)];
-    cnp::add_inplace<RXsize>(rvColPointer,R_st);
+    //rvColPointer = &glob.R_V[colMajorIndex(0,(4*isol.stagIndex[1] + 3),RVsize)];
+    //cnp::add_inplace<RXsize>(rvColPointer,R_st);
+
+    std::vector<int> colIdxList2;
+    findColumnIndices(glob, (4*isol.stagIndex[1] + 3), colIdxList2);
+    addColumnValues(glob, (4*isol.stagIndex[1] + 3), colIdxList2, R_st, 3*(Ncoords+Nwake));
 
 }
-
-
