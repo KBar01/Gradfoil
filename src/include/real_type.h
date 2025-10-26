@@ -3,9 +3,17 @@
 
 
 #ifdef AD_VERSION
+    
+    #if DO_BL_GRADIENT
+    #include <codi.hpp>
+    using Real = codi::RealReverseVec<16>;
+    using Tape = typename Real::Tape;
+    #else
     #include <codi.hpp>
     using Real = codi::RealReverseVec<3>;
     using Tape = typename Real::Tape;
+    #endif
+
 #elif FWD_CODI_VERSION
     #include <codi.hpp>
     using Real = codi::RealReverse;

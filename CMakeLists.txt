@@ -6,10 +6,16 @@ project(gradFoil)
 set(CMAKE_CXX_STANDARD 17)
 
 # Default build type
-
 set(CMAKE_BUILD_TYPE Release)
 include(FetchContent)
 
+option(DO_BL_GRADIENT "Enable boundary layer gradient calculation" OFF)
+
+if(DO_BL_GRADIENT)
+  set(DO_BL_GRADIENT_DEFINE 1)
+else()
+  set(DO_BL_GRADIENT_DEFINE 0)
+endif()
 #############################################
 # Dependencies
 #############################################
@@ -58,6 +64,7 @@ target_include_directories(CFoil_fwd_double PRIVATE
 target_compile_definitions(CFoil_fwd_double PRIVATE
   -DCODI_EnableEigen
   -DFWD_DOUBLE_VERSION
+  -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
 )
 
 #############################################
@@ -88,6 +95,7 @@ target_compile_definitions(CFoil_fwd_codi PRIVATE
   -DUSE_CODIPACK
   -DCODI_EnableEigen
   -DFWD_CODI_VERSION
+  -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
 )
 
 #############################################
@@ -114,6 +122,7 @@ target_compile_definitions(CFoil_AD PRIVATE
   -DUSE_CODIPACK
   -DCODI_EnableEigen
   -DAD_VERSION
+  -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
 )
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   target_compile_options(CFoil_AD PRIVATE 
