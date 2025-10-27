@@ -377,7 +377,7 @@ bool runCode(
 
                 out["conv"] = 1;
             #else
-            
+                out["conv"] = 1;
                 out["aerofoilChord"] = chordScale.getValue();
                 out["freestreamVelocity"] = Uinf.getValue();
                 out["CL"]  = post.cl.getValue();
