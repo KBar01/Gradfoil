@@ -422,7 +422,6 @@ bool runCode(
                     double tauWallOutOut[Ncoords];
                     for (int i=0;i<(2*Ncoords);++i){
                         inner[i] = foil.x[i].getValue() ;
-                        cps[i] = post.cp[i].getValue();
                     }
 
                     for (int i=0;i<(Ncoords);++i){
