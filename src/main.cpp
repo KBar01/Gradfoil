@@ -418,8 +418,8 @@ bool runCode(
                     }
 
                     double inner[2*Ncoords] ;
-                    double cps[2*Ncoords];
-                    double tauWallOutOut[Ncoords];
+                    double cps[Ncoords];
+                    double tauWallOut[Ncoords];
                     for (int i=0;i<(2*Ncoords);++i){
                         inner[i] = foil.x[i].getValue() ;
                     }
@@ -430,7 +430,7 @@ bool runCode(
                     }
                     out["innerFoil"] = inner;
                     out["Cp"] = cps;
-                    out["tauWall"] = tauWallOutOut;
+                    out["tauWall"] = tauWallOut;
                     
                     out["stagnation"] = isol.stagIndex;
                     out["topTransX"]  = topTransX.getValue();
