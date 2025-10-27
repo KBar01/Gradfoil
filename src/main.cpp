@@ -419,13 +419,19 @@ bool runCode(
 
                     double inner[2*Ncoords] ;
                     double cps[2*Ncoords];
+                    double tauWallOutOut[Ncoords];
                     for (int i=0;i<(2*Ncoords);++i){
                         inner[i] = foil.x[i].getValue() ;
                         cps[i] = post.cp[i].getValue();
                     }
+
+                    for (int i=0;i<(Ncoords);++i){
+                        cps[i] = post.cp[i].getValue();
+                        tauWallOut[i] = tauWall[i].getValue();
+                    }
                     out["innerFoil"] = inner;
                     out["Cp"] = cps;
-                    
+                    out["tauWall"] = tauWallOutOut;
                     
                     out["stagnation"] = isol.stagIndex;
                     out["topTransX"]  = topTransX.getValue();
