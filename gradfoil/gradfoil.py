@@ -54,7 +54,7 @@ def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,nc
     # Run the executable for first time, no restarting, use codi version to ensure output match to AD version of code
     initResult = subprocess.run([EXEC_FWD_codi],cwd=os.getcwd(), capture_output=True, text=True)
     initConvergence = initResult.returncode
-    if initConvergence:
+    if initConvergence==1:
         return True
 
     print("Initial run failed. Starting backstepping ...")
