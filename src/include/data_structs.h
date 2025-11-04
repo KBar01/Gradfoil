@@ -191,6 +191,8 @@ struct Post {
     //Real cpi[Ncoords] = {0};      // Inviscid Cp distribution
     Real cl = 0.0;              // Lift coefficient
     Real cd = 0.0;              // Total drag coefficient
+    Real cm = 0.0;
+
 };
 
 //-------------------------------------------------------------------------------

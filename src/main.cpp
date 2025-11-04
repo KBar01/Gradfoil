@@ -101,6 +101,7 @@ bool runCode(
     }
     Geom geom;
     geom.chord = chordScale;
+    geom.xref[0] = 0.25*chordScale;
 
     Real flattenedCoords[2 * Ncoords]={0};
     
@@ -308,7 +309,7 @@ bool runCode(
                         "theta Upper", "delta* Upper", "CtauMax Upper","edgeVelocity Ratio Upper", "dCpd(x/c) Upper", "CtauWall Upper", "delta99 Upper",
                         "theta Lower", "delta* Lower", "CtauMax Lower","edgeVelocity Ratio Lower", "dCpd(x/c) Lower", "CtauWall Lower", "delta99 Lower"};
     #else
-        std::vector<std::string> outputNames = {"CL", "CD", "OASPL"};
+        std::vector<std::string> outputNames = {"CL", "CD", "OASPL","CM"};
     #endif 
 
 
@@ -359,6 +360,7 @@ bool runCode(
                 out["CL"]  = post.cl.getValue();
                 out["CD"]  = post.cd.getValue();
                 
+                
                 out[outputNames[2]] = thetatop.getValue();
                 out[outputNames[3]] = deltaStop.getValue();
                 out[outputNames[4]] = CtauMaxtop.getValue();
@@ -382,7 +384,7 @@ bool runCode(
                 out["freestreamVelocity"] = Uinf.getValue();
                 out["CL"]  = post.cl.getValue();
                 out["CD"]  = post.cd.getValue();
-                
+                out["CM"]  = post.cm.getValue();
                 out["OASPL"] = OASPL.getValue();
 
                 if (doCps){
@@ -525,10 +527,11 @@ bool runCode(
             outputs[15] = deltabot;
 
         #else
-            constexpr int jacobianHeight = 3;
+            constexpr int jacobianHeight = 4;
             outputs[0] = post.cl;
             outputs[1] = post.cd;
             outputs[2] = OASPL;
+            outputs[3] = post.cm;
         #endif
             
 

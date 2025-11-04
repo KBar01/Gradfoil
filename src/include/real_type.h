@@ -10,7 +10,7 @@
     using Tape = typename Real::Tape;
     #else
     #include <codi.hpp>
-    using Real = codi::RealReverseVec<3>;
+    using Real = codi::RealReverseVec<4>;
     using Tape = typename Real::Tape;
     #endif
 

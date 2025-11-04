@@ -50,13 +50,13 @@ void calc_force(const Oper&op, const Geom&geom, const Param&par, const Isol&isol
 
         //cl_alpha += cpbar * (sind(alpha) * dxv[0] - cosd(alpha) * dxv[1]) * deg2rad;
 
-        //cm += cp1 * dx1nds / 3.0 + cp1 * dx2nds / 6.0 + cp2 * dx1nds / 6.0 + cp2 * dx2nds / 3.0;
+        post.cm += cp1 * dx1nds / 3.0 + cp1 * dx2nds / 6.0 + cp2 * dx1nds / 6.0 + cp2 * dx2nds / 3.0;
         //cdpi += dz * cpbar;
     }
 
     // Normalize by chord
     post.cl /= geom.chord;
-
+    post.cm /= (geom.chord*geom.chord);
     
     int iw = Ncoords+Nwake-1;  // end of wake
     const Real* U = &glob.U[colMajorIndex(0,iw,4)];
