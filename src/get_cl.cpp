@@ -34,10 +34,10 @@ void calc_force(const Oper&op, const Geom&geom, const Param&par, const Isol&isol
         Real dx1[2] = {x1[0] - geom.xref[0], x1[1] - geom.xref[1]};
         Real dx2[2] = {x2[0] - geom.xref[0], x2[1] - geom.xref[1]};
 
-        //Real dx1nds = dxv[0] * dx1[0] + dxv[1] * dx1[1];
-        //Real dx2nds = dxv[0] * dx2[0] + dxv[1] * dx2[1];
-        Real dx1nds = (x1[0] - geom.xref[0]) * dxv[1] + (x1[1] - geom.xref[1]) * dxv[0];
-        Real dx2nds = (x2[0] - geom.xref[0]) * dxv[1] - (x2[1] - geom.xref[1]) * dxv[0];
+        Real dx1nds = dxv[0] * dx1[0] + dxv[1] * dx1[1];
+        Real dx2nds = dxv[0] * dx2[0] + dxv[1] * dx2[1];
+        //Real dx1nds = (x1[0] - geom.xref[0]) * dxv[1] + (x1[1] - geom.xref[1]) * dxv[0];
+        //Real dx2nds = (x2[0] - geom.xref[0]) * dxv[1] - (x2[1] - geom.xref[1]) * dxv[0];
 
         Real dx = -dxv[0] * cos_alpha - dxv[1] * sin_alpha;
         Real dz =  dxv[1] * cos_alpha - dxv[0] * sin_alpha;
