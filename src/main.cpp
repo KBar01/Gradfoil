@@ -527,11 +527,11 @@ bool runCode(
             outputs[15] = deltabot;
 
         #else
-            constexpr int jacobianHeight = 4;
+            constexpr int jacobianHeight = 3;
             outputs[0] = post.cl;
             outputs[1] = post.cd;
             outputs[2] = OASPL;
-            outputs[3] = post.cm;
+            //outputs[3] = post.cm;
         #endif
             
 
