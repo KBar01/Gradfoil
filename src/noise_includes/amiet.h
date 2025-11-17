@@ -23,15 +23,11 @@ void calc_WPS_Kamruzzaman(Real theta,
                     Real deltaS,
                     Real delta,
                     Real tauWall,
-                    Real tauMax,
                     Real edgeVel,
-                    Real dpdx,
                     const Real (&omega)[Nsound],
                     Real rho,
                     Real nu,
-                    Real Uinf,
-                    Real (&phiqq)[Nsound]
-);
+                    Real (&phiqq)[Nsound]);
 
 void calc_WPS_Rozenburg(Real theta,
                     Real deltaS,

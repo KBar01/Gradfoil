@@ -11,30 +11,33 @@
 using json = nlohmann::json;
 
 
-void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,const Real delta, Real tauW,
+void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,const Real delta,const Real tauW,
                     const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound], Real nu,
                     const Real Uinf,
                     const Real X,const Real Y,const Real Z,const  Real S,const Real rho,const int isSuction,
                     Real (&WPS)[Nsound]){
  
+    
+    Real useTauW = tauW;
     if (tauW > tauMax){
-        tauW = tauMax;
+        useTauW = tauMax;
     }
+
     
     if (model == "roz"){
-            calc_WPS_Rozenburg(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
+            calc_WPS_Rozenburg(theta,deltaStar,delta,useTauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
         }
     else if (model == "goo")
     {
-        calc_WPS_Goody(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
+        calc_WPS_Goody(theta,deltaStar,delta,useTauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
     }
     else if (model == "kam")
     {
-        calc_WPS_Kamruzzaman(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
+        calc_WPS_Kamruzzaman(theta,deltaStar,delta,useTauW,edgeVel,omega,rho,nu,WPS);
     }
     else if (model == "tno")
     {
-        calc_WPS_TNO(delta,tauW,edgeVel,omega,rho,nu,isSuction,WPS);
+        calc_WPS_TNO(delta,useTauW,edgeVel,omega,rho,nu,isSuction,WPS);
     }
 
 }
