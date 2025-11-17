@@ -17,42 +17,47 @@
 using json = nlohmann::json;
 
 bool runCode(
+    
+    // restart logic for optimisations
     bool fwdDoubleRestart,
     bool fwdCodiRestart,
     bool ADrestart,
-    bool doLateADRestart,
-    const Real ADRestartRnorm,
+    // geometry parameters
+    const Real nCrit,
+    const Real Ufac, 
+    const Real TEfac,
+    const Real chordScaling,
+    const Real (&inXcoords)[Nin], 
+    Real (&inYcoords)[Nin],
+    // actual aero parameters
     Real alphad,
     Real Re, 
     Real Ma,
     Real rhoInf,
     Real kinViscInf,
-    const Real (&inXcoords)[Nin], 
-    Real (&inYcoords)[Nin],
+    const Real &topTransPos,
+    const Real &botTransPos,
+    const bool force,
+    // acoustic model parameters
+    const std::string model,
     const Real sampleTE,
     const Real X,
     const Real Y,
     const Real Z,
     const Real S,
-    Real Uinf,
-    const int doCps,
-    const Real nCrit,
-    const Real Ufac, 
-    const Real TEfac,
-    const Real &topTransPos,
-    const Real &botTransPos,
-    const bool force,
-    const std::string model){
+    // output parameters
+    const int doCps
+    ){
 
     
     #if DO_BL_GRADIENT
-    Real outputs[16] ; // 12 if doing all gradients CL CD and BL states for both surfaces
+    Real outputs[16] ; 
     #else
-    Real outputs[3] ; // only doing CL and CD gradients  (and fwd output)
+    Real outputs[3] ;
     #endif
 
-    // ------------- Doing Adjoint, register relevant input to track gradients --------------------------
-    #ifdef AD_VERSION
+    
+    #ifdef AD_VERSION //Doing Adjoint - registering inputs
 
         Tape& tape = Real::getTape();
         tape.setActive();
@@ -63,48 +68,23 @@ bool runCode(
         tape.registerInput(alphad);
 
         #if DO_BL_GRADIENT
-
-        Real ReRatio = Re / 1000000.0 ;
-
-        tape.registerInput(ReRatio);
-
-        Re = ReRatio * 1000000.0 ;
-        tape.registerInput(Ma);
+            Real ReRatio = Re / 1000000.0 ;
+            tape.registerInput(ReRatio);
+            Re = ReRatio * 1000000.0 ;
+            tape.registerInput(Ma);
         #endif
-
-    #elif FWD_CODI_VERSION
-
-        //Tape& tape = Real::getTape();
-        //tape.setActive();
-        //tape.registerInput(X);
-        //tape.setPassive();
-
     #endif
 
     Real alpha = (alphad/180)*M_PI;
-    
-    Real minX = 0.5, maxX = 0.01;
-    for (int i=0;i<Nin;++i){
-        Real newMin = std::min(minX,inXcoords[i]);
-        Real newMax = std::max(maxX,inXcoords[i]);
-        minX = newMin ;
-        maxX = newMax ;
-    }
-    Real chordScale = maxX - minX ;
-    
     Oper oper(alpha,Re,Ma);
     oper.rho = rhoInf;
 
-    
-    if (Uinf <= 0.0){   // indicates no custom Uinf given
-        Uinf = (Re*kinViscInf)/(chordScale) ;
-    }
+    //if (Uinf <= 0.0){   // indicates no custom Uinf given
+    //    Uinf = (Re*kinViscInf)/(chordScale) ;
+    //}
     Geom geom;
-    geom.chord = chordScale;
-    geom.xref[0] = 0.25*chordScale;
-
-    Real flattenedCoords[2 * Ncoords]={0};
     
+    Real flattenedCoords[2*Ncoords]={0};
     Real inCoords[2*Nin]={0};
     for (int i=0;i<Nin;++i){
         inCoords[colMajorIndex(0,i,2)] = inXcoords[i];
@@ -155,12 +135,8 @@ bool runCode(
     param.ncrit = nCrit;
     Wake wake;
     Vsol vsol;
-    
     Glob glob;
 
-    glob.doADrestartExtract = doLateADRestart;
-    glob.ADrestartRnorm = ADRestartRnorm ;
-    
     build_gamma_codi(isol,foil,oper);
     init_thermo(oper,param,geom);
     build_wake(foil,geom,oper,isol,wake);
@@ -268,7 +244,11 @@ bool runCode(
     bool converged = solve_coupled(oper,foil,wake,param,vsol,isol,glob,tdata,force);
     Post post;
     calc_force(oper,geom,param,isol,foil,glob,post);
+    
+    ////////////////////////////// Aero done, now acoustics ///////////////////////////////////////////////////////////////////
 
+
+    Real Uinf = (Re*kinViscInf)/(chordScaling) ;
     #ifndef AD_VERSION
         Real tauWall[Ncoords];
         if (doCps){
@@ -299,9 +279,9 @@ bool runCode(
         ycoords[i] = flattenedCoords[colMajorIndex(1,i,2)];
     }
 
-    interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,param,topsurf,botsurf,Uinf,geom,(sampleTE*geom.chord));
+    interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,param,topsurf,botsurf,Uinf,sampleTE,chordScaling);
 
-    Real OASPL = calc_OASPL(botsurf,topsurf,oper,geom,Uinf,X,Y,Z,S,kinViscInf,oper.rho,doCps,model);
+    Real OASPL = calc_OASPL(botsurf,topsurf,chordScaling,Uinf,X,Y,Z,S,kinViscInf,rhoInf,doCps,model);
     
     
     #if DO_BL_GRADIENT
@@ -327,8 +307,8 @@ bool runCode(
         Real Uetop = topsurf[3]/Uinf ;
         Real Uebot = botsurf[3]/Uinf ;
 
-        Real dCpdxtop = (topsurf[4]*chordScale) / (0.5*oper.rho*Uinf*Uinf);
-        Real dCpdxbot = (botsurf[4]*chordScale) / (0.5*oper.rho*Uinf*Uinf);
+        Real dCpdxtop = (topsurf[4]*chordScaling) / (0.5*oper.rho*Uinf*Uinf);
+        Real dCpdxbot = (botsurf[4]*chordScaling) / (0.5*oper.rho*Uinf*Uinf);
 
         Real Cftop = (2*topsurf[5])/(oper.rho*topsurf[3]*topsurf[3]) ;
         Real Cfbot = (2*botsurf[5])/(oper.rho*botsurf[3]*botsurf[3]) ;
@@ -642,6 +622,7 @@ int main(){
     Real Ma = j["Ma"].get<double>();
     Real rhoInf = j["rho"].get<double>();
     Real nuInf = j["nu"].get<double>();
+    Real custChord = j["chord"].get<double>();
 
     int doRestart = j["restart"].get<int>();
     int fwdCodiRestart = j["fwdCodiRestart"].get<int>();
@@ -669,12 +650,11 @@ int main(){
     const std::string model = j["model"].get<std::string>();
 
    
-    bool converged = runCode(doRestart,fwdCodiRestart,doADRestart,doLaterestart,lateRestartNorm,
-                            targetAlphaDeg,Re,Ma,rhoInf,nuInf,inXcoords,inYcoords,
-                            sampleTE,X,Y,Z,S,customUinf,
-                            doCps,Ncrit,Ufac,TEfac,
-                            topTransPos,botTransPos,force,
-                            model);
+    bool converged = runCode(doRestart,fwdCodiRestart,doADRestart,
+        Ncrit,Ufac,TEfac,custChord,inXcoords,inYcoords,
+        targetAlphaDeg,Re,Ma,rhoInf,nuInf,
+        topTransPos,botTransPos,force,
+        model,sampleTE,X,Y,Z,S,doCps);
     
     return converged;
     

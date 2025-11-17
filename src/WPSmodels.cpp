@@ -40,62 +40,53 @@ void calc_WPS_Kamruzzaman(Real theta,
                     Real deltaS,
                     Real delta,
                     Real tauWall,
-                    Real tauMax,
                     Real edgeVel,
                     Real dpdx,
                     const Real (&omega)[Nsound],
                     Real rho,
                     Real nu,
-                    Real Uinf,
                     Real (&phiqq)[Nsound])
     {
 
 
-    Real Ue = edgeVel; // will always be non-zero
-    
-    if (tauWall < 0.0){
-        tauWall *= 1.0;
-        if (tauWall < 0.0001) {
-            tauWall = 0.0001;
-        }
-    }
+    /*
+    A semi-empirical surface pressure
+    spectrum model for airfoil trailing-edge
+    noise prediction
 
-    if (tauMax < 0.0){
-        tauMax *= 1.0;
-        if (tauMax < 0.0001) {
-            tauMax = 0.0001;
-        }
-    }
+    M. Kamruzzaman, 2017 
+    */
+
+    Real Ue = edgeVel;
+    Real eps = 1e-6;
     
-    Real Cf = tauWall/ (0.5*Ue*Ue*rho);
+    // All Eq 4
+    Real H = deltaS/theta ;
+    Real Cf = tauWall / (0.5*Ue*Ue*rho);
     Real lambda = std::sqrt(2/Cf);
-    Real beta_c = std::max((theta/tauWall)*(dpdx),-1.81);
-    Real G = 6.1 * std::sqrt(beta_c+1.81) - 1.7;
+    Real G = lambda*(1.0 - (1/H));
+    Real beta_c = (((G+1.7)/6.1)*((G+1.7)/6.1)) - 1.81;
     
     Real Pi = 0.227;
     if (beta_c > -0.5){
         Pi = 0.8*std::pow(beta_c+0.5, 0.75);
     }
     
-    Real H = 1-G/lambda;
-    if (H<0.0){
-        H = 0.0;
-    }
-
+    // Table 1 in Lee : Comparison and Assessment of RecentEmpirical Models for Turbulent BoundaryLayer Wall Pressure Spectrum
     Real m = 0.5*std::pow(H/1.31, 0.3);
-
     Real a = 0.45*(1.75*std::pow(Pi*Pi*beta_c*beta_c, m) + 15);
     Real b = 2;
     Real c = 1.637;
     Real d = 0.27;
+    // Table 2
     Real e = 2.47;
     Real f = std::pow(1.15, -2.0/7.0);
     Real g = -2/7;
     Real h = 7;
+    // Table 3
     Real i = 1;
     Real u_t = std::sqrt(tauWall/rho);
-    Real Rt = (deltaS*u_t*u_t)/(nu*Ue);
-
+    Real Rt = (deltaS*u_t*u_t)/(nu*Ue); 
     Real SS   = Ue / (tauWall*tauWall*deltaS);
     Real FS   = deltaS/Ue ;
 
@@ -111,7 +102,7 @@ void calc_WPS_Rozenburg(Real theta,
                     Real delta,
                     Real tauWall,
                     Real tauMax,
-                    Real edgeVel,
+                    Real Ue,
                     Real dpdx,
                     const Real (&omega)[Nsound],
                     Real rho,
@@ -119,9 +110,14 @@ void calc_WPS_Rozenburg(Real theta,
                     Real Uinf,
                     Real (&phiqq)[Nsound]){
 
-    Real Ue = edgeVel;
-    Ue = 64.6;
     
+    
+    /*
+    Wall-Pressure Spectral Model Including the Adverse
+    Pressure Gradient Effects
+    Yannick Rozenberg, 2012
+    */
+
     Real Delta = delta/deltaS  ;
     
     Real beta_c = std::max((theta/tauWall)*(dpdx),-0.5);
@@ -129,21 +125,8 @@ void calc_WPS_Rozenburg(Real theta,
     if (beta_c > -0.5){
         Pi = 0.8*std::pow(beta_c+0.5, 0.75);
     }
-    
-    /* roz test 
-    Delta = 6.0;
-    delta = 0.00142;
-    deltaS = 0.00236;
-    theta = 0.00157;
-    tauWall = 5.43;
-    tauMax = 5.43;
-    beta_c = 3.51;
-    Pi = 1.56;
-    */
-
     Real u_t = std::sqrt(tauWall/rho);
-    Real Rt = (deltaS*u_t*u_t)/(nu*Ue);
-
+    Real Rt = (delta/Ue)/(nu/(u_t*u_t));
 
 
     Real b = 2; // Done
@@ -173,14 +156,6 @@ void calc_WPS_Rozenburg(Real theta,
 
 
 /////////////////////////////////// All TNO Funcs /////////////////////////////////////
-
-// this code follows that by Lee:
-/*
-Source Characterization of Turbulent
-Boundary Layer Trailing Edge Noise Using an
-Improved TNO Model
-*/
-
 void mean_velocity_profile(const Real (&y)[NblPoints],
                            Real delta,
                            Real u_t,
@@ -189,6 +164,9 @@ void mean_velocity_profile(const Real (&y)[NblPoints],
                            Real (&U)[NblPoints],
                            Real (&dUdy)[NblPoints])
 {
+
+    // Following Eq 19
+
     const Real kappa = 0.41;
     const Real B = 5.5;
     for (int i = 0; i < NblPoints; ++i) {
@@ -204,7 +182,7 @@ void mean_velocity_profile(const Real (&y)[NblPoints],
         }
         else{
 
-        Real W = 1-std::cos(M_PI*y[i] / delta);
+        Real W = 1-std::cos(M_PI*y[i] / delta); // Eq 20
         
         Real u_plus = (1.0 / kappa) * std::log(y_plus) + B +
                         0.5*W*((Ue/u_t) - (1.0/kappa)*std::log((u_t*delta)/nu) - B);
@@ -231,6 +209,7 @@ void Turb_shear_stress(
     Real (&u22)[NblPoints])
 {
    
+    // Using Eq 25-27
     for (int i = 0; i < NblPoints; ++i)
     {
        Real nu_t = l_mix[i]*l_mix[i]*std::sqrt(dUdy[i]*dUdy[i]);
@@ -253,12 +232,15 @@ void Integral_Length_scale(
     Real (&L2)[NblPoints],
     Real (&l_mix)[NblPoints])
 {
+
+    // Using Eq 22-24
     const Real k = 0.41;
+    const Real B = 5.5 ;
 
     for (int i = 0; i < NblPoints; ++i)
     {
         l_mix[i] = (0.085 * delta * std::tanh( (k*y[i]) / (0.085*delta))) /
-                        std::sqrt( std::pow(1+5.5*(y[i]/delta), 6.0) );
+                        std::sqrt( std::pow(1+B*(y[i]/delta), 6.0) );
         
         L2[i] = l_mix[i] / 0.41 ;
     }
@@ -275,6 +257,7 @@ void Energy_density_spectrum(
     Real (&phi22)[NblPoints])
 {
 
+    // Using Eq 28-32
     Real beta1 = 1.0;
     Real beta3 = 0.75;
 
@@ -297,8 +280,19 @@ void calc_WPS_TNO(
     const int isSuction,
     Real (&phiqq)[Nsound])
 {
+    
+    
+    /*
+    Source Characterization of Turbulent
+    Boundary Layer Trailing Edge Noise Using an
+    Improved TNO Model
+
+    Seongkyu Lee, 2016
+    */
+    
+    
+    
     // Compute shear velocity and min y from target y+
-    if (tauWall < 0.0) tauWall *= -1.0;
     Real u_t = std::sqrt(tauWall / rho);
 
     const Real yplus_target = 1.0;  
@@ -350,6 +344,8 @@ void calc_WPS_TNO(
 
     for (int w = 0; w < Nsound; ++w)
     {
+        
+        // Using Eq 37
         Real k1 = omega[w] / Uc;
         Real k = std::abs(k1);
 

@@ -152,13 +152,13 @@ void interp_BL_states(const int* topIdx,const int* botIdx, const int topNnodes, 
 
 
 // Computes dp/dx at x_target using cubic interpolation + central finite difference
-Real interpolate_dpdx(const Real* xcoords, const Real* Cps, const int* nodeIdx, const int nodeN, Real x_target, const Oper&oper,const Geom&geom,const Real Uinf) {
+Real interpolate_dpdx(const Real* xcoords, const Real* Cps, const int* nodeIdx, const int nodeN, Real x_target, const Oper&oper,const Real chordScale,const Real Uinf) {
     
     
-    Real h = 1e-6 * geom.chord ;  // Small step size for derivative approximation TODO: verfiy step is correct (convergence)
+    Real h = 1e-6 ;  // Small step size for derivative approximation TODO: verfiy step is correct (convergence)
 
     // Get x positions slightly left and right of target
-    Real x_plus = x_target + h;
+    Real x_plus  = x_target + h;
     Real x_minus = x_target - h;
 
     Real xs[4] = {
@@ -180,7 +180,7 @@ Real interpolate_dpdx(const Real* xcoords, const Real* Cps, const int* nodeIdx, 
     Real CpMinus = adaptive_interp(x_minus,xs,ps,nodeN);
 
     // Central finite difference
-    Real dpdx = ((CpPlus - CpMinus) / (2.0 * h)) * (0.5 * oper.rho * Uinf*Uinf);
+    Real dpdx = ((CpPlus - CpMinus) / (2.0*(h*chordScale))) * (0.5 * oper.rho * Uinf*Uinf);
 
     return dpdx;
 }
@@ -220,10 +220,10 @@ Real interpolate_cf(const Real* xcoords, const Real* states, const int* nodeIdx,
 
 
 void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, const Real*Cps, const Oper&oper, const Vsol&vsol, const Param&param,
-    Real (&topBLStates)[7],Real (&botBLStates)[7],const Real Uinf, const Geom&geom,const Real x_target) {
+    Real (&topBLStates)[7],Real (&botBLStates)[7],const Real Uinf, const Real x_target, const Real chordScale) {
 
     
-    if (std::abs(x_target - geom.chord) < 1e-7){
+    if (x_target == 1.0){
 
         // find my sampling positions
         const int NSAMPLES = 6; 
@@ -232,7 +232,7 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
         Real count = 0.0;
         for (int i = 0; i < NSAMPLES; ++i) {
             Real frac = 0.96 + (0.985 - 0.96) * count / (nSample-1);
-            xSamples[i] = frac * geom.chord;
+            xSamples[i] = frac;
             count += 1.0;
         }
 
@@ -266,8 +266,8 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
                 NsampleTop -= 1.0;
             }
 
-            Real dpdxBot = interpolate_dpdx(xcoords, Cps, botIdx, botN, xSamples[i], oper, geom, Uinf);
-            Real dpdxTop = interpolate_dpdx(xcoords, Cps, topIdx, topN, xSamples[i], oper, geom, Uinf);
+            Real dpdxBot = interpolate_dpdx(xcoords, Cps, botIdx, botN, xSamples[i], oper, chordScale, Uinf);
+            Real dpdxTop = interpolate_dpdx(xcoords, Cps, topIdx, topN, xSamples[i], oper, chordScale, Uinf);
 
             // do exactly same post-processing as your original code but using tmpTop/tmpBot:
             // --- bottom
@@ -315,9 +315,6 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
 
     else {
 
-    
-    //Real x_target = 0.95;
-    
     /* State order: theta, delta*, tau_max, Ue, dpdx, tau_wall, delta 99% thickness*/
     
     // find index of node before sampling position (top and bottom)
@@ -330,8 +327,8 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
 
     interp_BL_states(topIdx,botIdx,topN,botN,x_target,xcoords,states,topBLStates,botBLStates);
     
-    Real dpdxBot = interpolate_dpdx(xcoords,Cps,botIdx,botN,x_target,oper,geom,Uinf);
-    Real dpdxTop = interpolate_dpdx(xcoords,Cps,topIdx,topN,x_target,oper,geom,Uinf);
+    Real dpdxBot = interpolate_dpdx(xcoords,Cps,botIdx,botN,x_target,oper,chordScale,Uinf);
+    Real dpdxTop = interpolate_dpdx(xcoords,Cps,topIdx,topN,x_target,oper,chordScale,Uinf);
     
     // ---------------------- bottom surface dimensionals -----------------------------------------
     Real ignore;
@@ -347,7 +344,11 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
     Real cfBot = interpolate_cf(xcoords,states,botIdx,botN,x_target,vsol,param);
     Real tauWallBot = (cfBot/2) * oper.rho * botBLStates[3] * botBLStates[3] ;
     botBLStates[5] = tauWallBot ;
-    
+    // scaling theta and delta* by given chord 
+    botBLStates[0] *= chordScale ;
+    botBLStates[1] *= chordScale ;
+
+
     // now get 99% thickness
     Real deltaBot = 0.0;
     Real frictionVel = std::sqrt(tauWallBot/oper.rho) ;
@@ -371,6 +372,9 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
     Real tauWallTop = (cfTop/2) * oper.rho * topBLStates[3] * topBLStates[3] ;
     topBLStates[5] = tauWallTop ;
 
+
+    topBLStates[0] *= chordScale ;
+    topBLStates[1] *= chordScale ;
     // now get 99% thickness
     Real deltaTop = 0.0;
     frictionVel = std::sqrt(tauWallTop/oper.rho) ;

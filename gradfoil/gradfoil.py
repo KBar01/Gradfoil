@@ -13,7 +13,7 @@ EXEC_FWD_codi = os.path.join(BIN_DIR, "CFoil_fwd_codi")
 EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
 
 
-def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,ncrit,custUinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,force,lateRestart,lateRestartNorm):
+def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,ncrit,custUinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,force,lateRestart,lateRestartNorm,chord):
     
 
     cwd = os.getcwd()
@@ -44,7 +44,8 @@ def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,nc
         "toptrans":      toptrans,
         "bottrans":      bottrans,
         "forcetrans":    force,
-        "model":  model
+        "model":  model,
+        "chord": chord
     }
 
     # Write JSON input file
@@ -195,14 +196,14 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,
             rho=1.225, nu=1.789e-5, Uinf=0,ncrit=9.0,
             Ufac=1.0,TEfac=0.09, repanel=0,
             toptrans=0.5,bottrans=0.5,forcetrans=0,
-            returnFoilCps=0,lateRestart=0,lateRestartNorm=1e-5):
+            returnFoilCps=0,lateRestart=0,lateRestartNorm=1e-5,chord=1.0):
     
     
     #xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,ncrit,custUinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,force,lateRestart,lateRestartNorm
     if repanel:
         success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
                                sampleTE,observerX,observerY,observerZ,span,model,
-                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm)
+                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord)
 
         if success:
             return success
@@ -213,7 +214,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,
                 print('trying different panel distribution ('+str(count)+'/6)')
                 success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
                                sampleTE,observerX,observerY,observerZ,span,model,
-                               rho,nu,ncrit,Uinf,returnFoilCps,uf,tef,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm)
+                               rho,nu,ncrit,Uinf,returnFoilCps,uf,tef,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord)
                 if success:
                     break
                 count +=1
@@ -223,7 +224,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,
     else:
         success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
                                sampleTE,observerX,observerY,observerZ,span,model,
-                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm)
+                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord)
         return success
     
 

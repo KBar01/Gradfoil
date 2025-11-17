@@ -11,13 +11,16 @@
 using json = nlohmann::json;
 
 
-void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,const Real delta,const Real tauW,
+void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,const Real delta, Real tauW,
                     const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound], Real nu,
-                    const Oper&oper,const Geom&geom,const Real Uinf,
+                    const Real Uinf,
                     const Real X,const Real Y,const Real Z,const  Real S,const Real rho,const int isSuction,
-                
                     Real (&WPS)[Nsound]){
  
+    if (tauW > tauMax){
+        tauW = tauMax;
+    }
+    
     if (model == "roz"){
             calc_WPS_Rozenburg(theta,deltaStar,delta,tauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
         }
@@ -36,7 +39,7 @@ void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,co
 
 }
 
-Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,const Geom&geom, const Real Uinf,
+Real calc_OASPL(const Real* botStates, const Real* topStates, const Real chordScale, const Real Uinf,
     const Real X,const Real Y,const Real Z, const Real S, const Real nu, const Real rho,
     const int doCps,const std::string& model){
 
@@ -70,7 +73,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
     if (tauMax > 0.0){ 
         
         calc_WPS(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,
-                    omega,nu,oper,geom,Uinf,X,Y,Z,S,rho,1,WPSUpper);
+                    omega,nu,Uinf,X,Y,Z,S,rho,1,WPSUpper);
     }
     theta = botStates[0];
     deltaS = botStates[1];
@@ -86,13 +89,11 @@ Real calc_OASPL(const Real* botStates, const Real* topStates,const Oper&oper,con
 
     if (tauMax > 0.0){ 
         calc_WPS(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,
-                    omega,nu,oper,geom,Uinf,X,Y,Z,S,rho,0,WPSLower);
+                    omega,nu,Uinf,X,Y,Z,S,rho,0,WPSLower);
     }
 
-    
-    
     Real farfieldSpectra[Nsound] ;
-    TE_noise_outer((Uinf/340),Uinf,X,Y,Z,geom.chord/2,0.0,geom.chord,S,340,oper.rho,nu,
+    TE_noise_outer((Uinf/340),Uinf,X,Y,Z,chordScale/2,0.0,chordScale,S,340,rho,nu,
                 omega,WPSLower,WPSUpper,farfieldSpectra);
 
     // integrate S_pp over frequency:
