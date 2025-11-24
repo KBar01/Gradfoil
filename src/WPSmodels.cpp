@@ -38,7 +38,6 @@ void calc_WPS_Goody(Real theta,
 
 void calc_WPS_Kamruzzaman(Real theta,
                     Real deltaS,
-                    Real delta,
                     Real tauWall,
                     Real edgeVel,
                     const Real (&omega)[Nsound],
@@ -106,7 +105,6 @@ void calc_WPS_Rozenburg(Real theta,
                     const Real (&omega)[Nsound],
                     Real rho,
                     Real nu,
-                    Real Uinf,
                     Real (&phiqq)[Nsound]){
 
     

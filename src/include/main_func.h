@@ -74,7 +74,7 @@ void interpolate_at_95_both_surfaces(const Real* xcoords, const Real* states, co
 
 Real calc_OASPL(const Real* botStates, const Real* topStates, const Real chordScale, const Real Uinf,
     const Real X,const Real Y,const Real Z, const Real S, const Real nu, const Real rho,
-    const int doCps,const std::string& model);
+    const int WPSjson,const std::string& model);
 
 
 #endif

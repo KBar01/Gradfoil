@@ -47,9 +47,9 @@ bool runCode(
     const Real S,
     // output parameters
     const int doCps
+
     ){
 
-    
     #if DO_BL_GRADIENT
     Real outputs[16] ; 
     #else
@@ -280,9 +280,7 @@ bool runCode(
     }
 
     interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,param,topsurf,botsurf,Uinf,sampleTE,chordScaling);
-
     Real OASPL = calc_OASPL(botsurf,topsurf,chordScaling,Uinf,X,Y,Z,S,kinViscInf,rhoInf,doCps,model);
-    
     
     #if DO_BL_GRADIENT
         std::vector<std::string> outputNames = {"CL", "CD",
@@ -446,7 +444,6 @@ bool runCode(
             outFile << out.dump(4);  // pretty print with 4 spaces indentation
             outFile.close();
             
-            
         }
         else{
 
@@ -608,6 +605,50 @@ int main(){
     json j;
     infile >> j;
 
+    const int doWPSonly = j["WPSonly"].get<int>();
+
+    if (doWPSonly){
+
+        Real rhoInf = j["rho"].get<double>();
+        Real kinViscInf = j["nu"].get<double>();
+        Real chordScaling = j["chord"].get<double>();
+        Real Re = j["Re"].get<double>();
+        const Real X = j["X"].get<double>();
+        const Real Y = j["Y"].get<double>();
+        const Real Z = j["Z"].get<double>();
+        const Real S = j["S"].get<double>();
+        const Real toptheta   = j["toptheta"].get<double>();
+        const Real topdstar   = j["topdstar"].get<double>();
+        const Real topdelta   = j["topdelta"].get<double>();
+        const Real toptauw    = j["toptauw"].get<double>();
+        const Real toptaumax  = j["toptaumax"].get<double>();
+        const Real topue      = j["topue"].get<double>();
+        const Real topdpdx    = j["topdpdx"].get<double>();
+
+        const Real bottheta   = j["bottheta"].get<double>();
+        const Real botdstar   = j["botdstar"].get<double>();
+        const Real botdelta   = j["botdelta"].get<double>();
+        const Real bottauw    = j["bottauw"].get<double>();
+        const Real bottaumax  = j["bottaumax"].get<double>();
+        const Real botue      = j["botue"].get<double>();
+        const Real botdpdx    = j["botdpdx"].get<double>();
+        const std::string model = j["model"].get<std::string>();
+        // HERE: optional assignment of BL properties
+        Real topsurf[7],botsurf[7];
+        topsurf[0],botsurf[0] = toptheta,bottheta;
+        topsurf[1],botsurf[1] = topdstar,botdstar;
+        topsurf[2],botsurf[2] = toptaumax,bottaumax;
+        topsurf[3],botsurf[3] = topue,botue;
+        topsurf[4],botsurf[4] = topdpdx,botdpdx;
+        topsurf[5],botsurf[5] = toptauw,bottauw;
+        topsurf[6],botsurf[6] = topdelta,botdelta;
+
+        Real Uinf = (Re*kinViscInf)/(chordScaling) ;
+        Real OASPL = calc_OASPL(botsurf,topsurf,chordScaling,Uinf,X,Y,Z,S,kinViscInf,rhoInf,1,model);
+        return 1 ;
+    }
+    else{
+
     Real inXcoords[Nin]={0}, inYcoords[Nin]={0};
 
     for (int i = 0; i < Nin; ++i) {
@@ -641,15 +682,12 @@ int main(){
     const int doCps = j["returnData"].get<int>();
     const Real Ufac = j["Ufac"].get<double>();
     const Real TEfac = j["TEfac"].get<double>();
-
+    const std::string model = j["model"].get<std::string>();
     // forcing transition variables
     const bool force = j["forcetrans"].get<int>();
     const Real topTransPos = j["toptrans"].get<double>();
     const Real botTransPos = j["bottrans"].get<double>();
-    
-    const std::string model = j["model"].get<std::string>();
 
-   
     bool converged = runCode(doRestart,fwdCodiRestart,doADRestart,
         Ncrit,Ufac,TEfac,custChord,inXcoords,inYcoords,
         targetAlphaDeg,Re,Ma,rhoInf,nuInf,
@@ -657,5 +695,6 @@ int main(){
         model,sampleTE,X,Y,Z,S,doCps);
     
     return converged;
+    }
     
 };

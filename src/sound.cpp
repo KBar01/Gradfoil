@@ -25,7 +25,7 @@ void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,co
 
     
     if (model == "roz"){
-            calc_WPS_Rozenburg(theta,deltaStar,delta,useTauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
+            calc_WPS_Rozenburg(theta,deltaStar,delta,useTauW,tauMax,edgeVel,dpdx,omega,rho,nu,WPS);
         }
     else if (model == "goo")
     {
@@ -33,7 +33,7 @@ void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,co
     }
     else if (model == "kam")
     {
-        calc_WPS_Kamruzzaman(theta,deltaStar,delta,useTauW,edgeVel,omega,rho,nu,WPS);
+        calc_WPS_Kamruzzaman(theta,deltaStar,useTauW,edgeVel,omega,rho,nu,WPS);
     }
     else if (model == "tno")
     {
@@ -44,7 +44,7 @@ void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,co
 
 Real calc_OASPL(const Real* botStates, const Real* topStates, const Real chordScale, const Real Uinf,
     const Real X,const Real Y,const Real Z, const Real S, const Real nu, const Real rho,
-    const int doCps,const std::string& model){
+    const int WPSjson,const std::string& model){
 
     const Real startExp = 2.0; // start exp : 2 (100Hz)
     const Real endExp = 4.30103; // final exp : 4.30103 (20,000 Hz)
@@ -78,6 +78,8 @@ Real calc_OASPL(const Real* botStates, const Real* topStates, const Real chordSc
         calc_WPS(model,theta,deltaS,delta,tauWall,tauMax,edgeVel,dpdx,
                     omega,nu,Uinf,X,Y,Z,S,rho,1,WPSUpper);
     }
+    
+    
     theta = botStates[0];
     deltaS = botStates[1];
     tauMax = botStates[2];
@@ -109,6 +111,32 @@ Real calc_OASPL(const Real* botStates, const Real* topStates, const Real chordSc
     // Now convert to dB re 20 µPa:
     Real pref2 = (20e-6)*(20e-6); // reference pressure squared
     Real OASPL = 10.0 * std::log10(integral / pref2);
+
+    # ifdef FWD_CODI_VERSION
+    if (WPSjson == 1) {
+        json j;
+        double prefSqrd = pref2.getValue();
+        std::vector<double> freq_d(Nsound);
+        std::vector<double> wpsupper_d(Nsound);
+        std::vector<double> wpslower_d(Nsound);
+        std::vector<double> spectra_d(Nsound);
+        for (int i=0; i<Nsound; ++i){
+            freq_d[i]     = Freq[i].getValue();
+            wpsupper_d[i] = (WPSUpper[i].getValue())/prefSqrd;
+            wpslower_d[i] = (WPSLower[i].getValue())/prefSqrd;
+            spectra_d[i]  = (farfieldSpectra[i].getValue())/prefSqrd;
+        }
+        j["frequency_Hz"]        = freq_d;
+        j["WPS_upper/prefSqrd"]  = wpsupper_d;
+        j["WPS_lower/prefSqrd"]  = wpslower_d;
+        j["FF_spectra/prefSqrd"] = spectra_d;
+        j["OASPL_dB"]     = OASPL;
+
+        std::ofstream file("WPS.json");
+        file << j.dump(4);     // pretty print, 4 spaces
+        file.close();
+    }   
+    #endif
 
     return OASPL;
 }

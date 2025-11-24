@@ -21,25 +21,24 @@ void calc_WPS_Goody(Real theta,
 
 void calc_WPS_Kamruzzaman(Real theta,
                     Real deltaS,
-                    Real delta,
                     Real tauWall,
                     Real edgeVel,
                     const Real (&omega)[Nsound],
                     Real rho,
                     Real nu,
-                    Real (&phiqq)[Nsound]);
+                    Real (&phiqq)[Nsound]
+);
 
 void calc_WPS_Rozenburg(Real theta,
                     Real deltaS,
                     Real delta,
                     Real tauWall,
                     Real tauMax,
-                    Real edgeVel,
+                    Real Ue,
                     Real dpdx,
                     const Real (&omega)[Nsound],
                     Real rho,
                     Real nu,
-                    Real Uinf,
                     Real (&phiqq)[Nsound]
 );
 
@@ -53,11 +52,11 @@ void calc_WPS_TNO(
     const int isSuction,
     Real (&phiqq)[Nsound]);
 
-Real calc_Spp_Freq(
-    Real c0,  Real rho0, Real C,Real MX, Real omega,
-    Real X, Real Y, Real Z,
-    Real S, Real Phi_qq_input,int Order
-);
+//Real calc_Spp_Freq(
+//    Real c0,  Real rho0, Real C,Real MX, Real omega,
+//    Real X, Real Y, Real Z,
+//    Real S, Real Phi_qq_input,int Order
+//);
 
 
 void TE_noise_outer(

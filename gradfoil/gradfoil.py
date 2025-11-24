@@ -45,7 +45,8 @@ def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,nc
         "bottrans":      bottrans,
         "forcetrans":    force,
         "model":  model,
-        "chord": chord
+        "chord": chord,
+        "WPSonly":0
     }
 
     # Write JSON input file
@@ -232,6 +233,54 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,
 def grad_run():
     # Run the AD version of the code, using known solution from fwd run
     result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
+
+def WPS_run(Re,X,Y,Z,S,model,chord,rho,nu,topBLstates,botBLstates):
+    cwd = os.getcwd()
+    in_json_path = os.path.join(cwd, "input.json")
+    data = {
+        "Re":            Re,
+        "rho":           rho,
+        "nu":            nu,
+        "X":             X,
+        "Y":             Y,
+        "Z":             Z,
+        "S":             S,
+        "model":  model,
+        "chord": chord,
+        "WPSonly": 1,
+        
+        # -------- TOP boundary layer states --------
+        # order: dstar, theta, delta, tauw, taumax, ue, dpdx
+        "topdstar":   topBLstates[0],
+        "toptheta":   topBLstates[1],
+        "topdelta":   topBLstates[2],
+        "toptauw":    topBLstates[3],
+        "toptaumax":  topBLstates[4],
+        "topue":      topBLstates[5],
+        "topdpdx":    topBLstates[6],
+
+        # -------- BOTTOM boundary layer states --------
+        "botdstar":   botBLstates[0],
+        "bottheta":   botBLstates[1],
+        "botdelta":   botBLstates[2],
+        "bottauw":    botBLstates[3],
+        "bottaumax":  botBLstates[4],
+        "botue":      botBLstates[5],
+        "botdpdx":    botBLstates[6],
+    }
+
+    # Write JSON input file
+    with open(in_json_path, "w") as f:
+        json.dump(data, f,indent=4)
+
+    # Run the executable for first time, no restarting, use codi version to ensure output match to AD version of code
+    initResult = subprocess.run([EXEC_FWD_codi],cwd=os.getcwd(), capture_output=True, text=True)
+    initConvergence = initResult.returncode
+    if initConvergence==1:
+        return True
+    
+    
+
 
 
 
