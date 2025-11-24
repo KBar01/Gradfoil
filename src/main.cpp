@@ -635,13 +635,20 @@ int main(){
         const std::string model = j["model"].get<std::string>();
         // HERE: optional assignment of BL properties
         Real topsurf[7],botsurf[7];
-        topsurf[0],botsurf[0] = toptheta,bottheta;
-        topsurf[1],botsurf[1] = topdstar,botdstar;
-        topsurf[2],botsurf[2] = toptaumax,bottaumax;
-        topsurf[3],botsurf[3] = topue,botue;
-        topsurf[4],botsurf[4] = topdpdx,botdpdx;
-        topsurf[5],botsurf[5] = toptauw,bottauw;
-        topsurf[6],botsurf[6] = topdelta,botdelta;
+        topsurf[0] = toptheta;
+        botsurf[0] = bottheta;
+        topsurf[1] = topdstar;
+        botsurf[1] = botdstar;
+        topsurf[2] = toptaumax;
+        botsurf[2] = bottaumax;
+        topsurf[3] = topue;
+        botsurf[3] = botue;
+        topsurf[4] = topdpdx;
+        botsurf[4] = botdpdx;
+        topsurf[5] = toptauw;
+        botsurf[5] = bottauw;
+        topsurf[6] = topdelta;
+        botsurf[6] = botdelta;
 
         Real Uinf = (Re*kinViscInf)/(chordScaling) ;
         Real OASPL = calc_OASPL(botsurf,topsurf,chordScaling,Uinf,X,Y,Z,S,kinViscInf,rhoInf,1,model);
