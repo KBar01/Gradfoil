@@ -130,7 +130,7 @@ Real calc_OASPL(const Real* botStates, const Real* topStates, const Real chordSc
         j["WPS_upper/prefSqrd"]  = wpsupper_d;
         j["WPS_lower/prefSqrd"]  = wpslower_d;
         j["FF_spectra/prefSqrd"] = spectra_d;
-        j["OASPL_dB"]     = OASPL;
+        j["OASPL_dB"]     = OASPL.getValue();
 
         std::ofstream file("WPS.json");
         file << j.dump(4);     // pretty print, 4 spaces
