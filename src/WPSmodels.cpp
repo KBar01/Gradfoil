@@ -39,7 +39,8 @@ void calc_WPS_Goody(Real theta,
 void calc_WPS_Kamruzzaman(Real theta,
                     Real deltaS,
                     Real tauWall,
-                    Real edgeVel,
+                    Real Ue,
+                    Real dpdx,
                     const Real (&omega)[Nsound],
                     Real rho,
                     Real nu,
@@ -55,16 +56,8 @@ void calc_WPS_Kamruzzaman(Real theta,
     M. Kamruzzaman, 2017 
     */
 
-    Real Ue = edgeVel;
-    Real eps = 1e-6;
-    
-    // All Eq 4
     Real H = deltaS/theta ;
-    Real Cf = tauWall / (0.5*Ue*Ue*rho);
-    Real lambda = std::sqrt(2/Cf);
-    Real G = lambda*(1.0 - (1/H));
-    Real beta_c = (((G+1.7)/6.1)*((G+1.7)/6.1)) - 1.81;
-    
+    Real beta_c = std::max((theta/tauWall)*(dpdx),-0.5);
     Real Pi = 0.227;
     if (beta_c > -0.5){
         Pi = 0.8*std::pow(beta_c+0.5, 0.75);

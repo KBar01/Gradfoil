@@ -22,12 +22,12 @@ void calc_WPS_Goody(Real theta,
 void calc_WPS_Kamruzzaman(Real theta,
                     Real deltaS,
                     Real tauWall,
-                    Real edgeVel,
+                    Real Ue,
+                    Real dpdx,
                     const Real (&omega)[Nsound],
                     Real rho,
                     Real nu,
-                    Real (&phiqq)[Nsound]
-);
+                    Real (&phiqq)[Nsound]);
 
 void calc_WPS_Rozenburg(Real theta,
                     Real deltaS,

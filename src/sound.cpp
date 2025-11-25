@@ -33,7 +33,7 @@ void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,co
     }
     else if (model == "kam")
     {
-        calc_WPS_Kamruzzaman(theta,deltaStar,useTauW,edgeVel,omega,rho,nu,WPS);
+        calc_WPS_Kamruzzaman(theta,deltaStar,useTauW,edgeVel,dpdx,omega,rho,nu,WPS);
     }
     else if (model == "tno")
     {
