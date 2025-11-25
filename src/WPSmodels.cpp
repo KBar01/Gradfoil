@@ -66,24 +66,16 @@ void calc_WPS_Kamruzzaman(Real theta,
     // Table 1 in Lee : Comparison and Assessment of RecentEmpirical Models for Turbulent BoundaryLayer Wall Pressure Spectrum
     Real m = 0.5*std::pow(H/1.31, 0.3);
     Real a = 0.45*(1.75*std::pow(Pi*Pi*beta_c*beta_c, m) + 15);
-    Real b = 2;
-    Real c = 1.637;
-    Real d = 0.27;
-    // Table 2
-    Real e = 2.47;
-    Real f = std::pow(1.15, -2.0/7.0);
-    Real g = -2/7;
-    Real h = 7;
-    // Table 3
-    Real i = 1;
     Real u_t = std::sqrt(tauWall/rho);
-    Real Rt = (deltaS*u_t*u_t)/(nu*Ue); 
+    Real Rt = (deltaS/Ue) / (nu/(u_t*u_t));
+    Real B3 = std::pow(1.15*Rt, -2.0/7.0);
+   
     Real SS   = Ue / (tauWall*tauWall*deltaS);
     Real FS   = deltaS/Ue ;
 
     for (int n=0;n<Nsound;++n){
         Real omegaBar= omega[n]*FS ;
-        phiqq[n] = ((a*std::pow(omegaBar,b))/(std::pow(i*std::pow(omegaBar, c) + d, e) + std::pow((f*std::pow(Rt, g)*omegaBar), h)))/SS;
+        phiqq[n] = ((a*std::pow(omegaBar,2.0)) / (std::pow(std::pow(omegaBar, 1.637) + 0.27, 2.47) + std::pow((B3*omegaBar), 7.0)))/SS;
     }
 
 }
