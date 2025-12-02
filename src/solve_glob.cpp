@@ -150,7 +150,7 @@ void solve_sys(Glob& glob) {
 #endif
 
 
-void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const Oper& oper) {
+void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const Oper& oper, const int doSolve) {
     
     
     constexpr int Nsys = Ncoords+Nwake;
@@ -214,7 +214,9 @@ void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const 
         }
     }
 
-    solve_sys(glob);
+    if (doSolve) {
+        solve_sys(glob);
+    }
 }
 
 

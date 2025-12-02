@@ -46,7 +46,7 @@ void stagpoint_move(Isol& isol,Glob& glob,const Foil& foil,const Wake& wake,Vsol
 
 void build_glob_RV(const Foil&foil, const Vsol&vsol,const Isol&isol,Glob&glob, Param&param, Trans&tdata);
 
-void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const Oper& oper);
+void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const Oper& oper, const int doSolve);
 
 void update_state(const Oper&oper, const Param&param, Glob&glob,Vsol&vsol);
 
