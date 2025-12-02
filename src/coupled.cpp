@@ -138,25 +138,6 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
             clear_RV(glob, isol, vsol, foil, param);
             converged = true;
             glob.convergenceIteration = i;
-            
-            #ifdef FWD_CODI_VERSION
-            json restart;
-
-            std::vector<double> states_vec(RVdimension);
-            for (int k = 0; k < RVdimension; ++k){
-                states_vec[k] = glob.U[k].getValue();
-            }
-         
-            restart["states"] = states_vec;
-            restart["turb"]   = vsol.turb;
-            restart["stag"] = isol.stagIndex;
-
-            restart[""]
-            // Write JSON file
-            std::ofstream fout("restart.json");
-            fout << restart.dump(4);   // pretty-print with indentation
-            #endif
-            
             break;
         }
         
