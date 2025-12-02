@@ -71,7 +71,6 @@ void stagpoint_move(Isol& isol,Glob& glob,const Foil& foil,const Wake& wake,Vsol
     // If moved to a new panel, update ue signs and recompute surfaces
     if (newpanel) {
 
-
         for (int i=0; i<=I[0]; ++i){ isol.edgeVelSign[i] = -1;}
         for (int i=I[0]+1; i<Ncoords; ++i){ isol.edgeVelSign[i] = 1;}
 
