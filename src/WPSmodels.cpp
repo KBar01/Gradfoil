@@ -173,9 +173,6 @@ void calc_WPS_Lee(Real theta,
     Real u_t = std::sqrt(tauWall/rho);
     Real Rt = (delta/Ue)/(nu/(u_t*u_t));
 
-
-    Real b = 2; // Done
-    Real c = 0.75; // Done
     Real e = 3.7 + 1.5*beta_c ; //Done - A1
     Real d = 4.76*std::pow((1.4/Delta), 0.75) * (0.375*e -1) ; // F1
     Real dStar = d ;
@@ -183,20 +180,16 @@ void calc_WPS_Lee(Real theta,
         dStar = std::max(1.0,1.5*d) ;
     }
 
-    Real firstTerm = std::max(1.0,(0.25*beta_c - 0.52));
-
-    Real aStar = firstTerm*(2.82*Delta*Delta*std::pow((6.13*std::pow(Delta,-0.75) + d), e))  *  (4.2*(Pi/Delta) + 1); //Done
-    Real f = 8.8; //done
-    Real g = -0.57; //done
-    
     Real hStar_temp = std::min(5.35, 0.139 + 3.1043*beta_c); // done
     Real hStar = std::min(hStar_temp, 19.0/std::sqrt(Rt)) + 7.0 ;
-    
     if (hStar == 12.35){
         hStar = std::min(3.0,  19.0/std::sqrt(Rt))+ 7.0 ;
     }
-    Real i = 4.76; //done
 
+    Real firstTerm = std::max(1.0,(0.25*beta_c - 0.52));
+
+    Real aStar = firstTerm*(2.82*Delta*Delta*std::pow((6.13*std::pow(Delta,-0.75) + d), e))  *  (4.2*(Pi/Delta) + 1); //Done
+ 
     Real SS   = Ue / (tauWall*deltaS);
     Real FS   = deltaS/Ue ;
 
