@@ -190,7 +190,7 @@ void calc_WPS_Lee(Real theta,
 
     Real aStar = firstTerm*(2.82*Delta*Delta*std::pow((6.13*std::pow(Delta,-0.75) + d), e))  *  (4.2*(Pi/Delta) + 1); //Done
  
-    Real SS   = Ue / (tauWall*deltaS);
+    Real SS   = Ue / (tauWall*tauWall*deltaS);
     Real FS   = deltaS/Ue ;
 
     Real C3prime = 8.8*std::pow(Rt, -0.57);
