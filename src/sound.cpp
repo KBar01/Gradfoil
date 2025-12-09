@@ -31,6 +31,10 @@ void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,co
     {
         calc_WPS_Goody(theta,deltaStar,delta,useTauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
     }
+    else if (model == "lee")
+    {
+        calc_WPS_Lee(theta,deltaStar,delta,useTauW,tauMax,edgeVel,dpdx,omega,rho,nu,WPS);
+    }
     else if (model == "kam")
     {
         calc_WPS_Kamruzzaman(theta,deltaStar,useTauW,edgeVel,dpdx,omega,rho,nu,WPS);

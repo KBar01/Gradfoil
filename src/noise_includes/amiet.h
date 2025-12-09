@@ -42,6 +42,19 @@ void calc_WPS_Rozenburg(Real theta,
                     Real (&phiqq)[Nsound]
 );
 
+void calc_WPS_Lee(Real theta,
+                    Real deltaS,
+                    Real delta,
+                    Real tauWall,
+                    Real tauMax,
+                    Real Ue,
+                    Real dpdx,
+                    const Real (&omega)[Nsound],
+                    Real rho,
+                    Real nu,
+                    Real (&phiqq)[Nsound]
+);
+
 void calc_WPS_TNO(
     const Real delta,
     Real tauWall,
