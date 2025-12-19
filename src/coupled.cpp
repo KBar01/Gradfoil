@@ -135,6 +135,36 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
             fout << restart.dump(4);   // pretty-print with indentation
             #endif
 
+            #ifdef FWD_DOUBLE_VERSION
+            solve_glob(foil,isol,glob,vsol,oper,0);
+            json restart;
+
+            std::vector<double> states_vec(RVdimension);
+            for (int k = 0; k < RVdimension; ++k){
+                states_vec[k] = glob.U[k];
+            }
+         
+            restart["states"] = states_vec;
+            restart["turb"]   = vsol.turb;
+            restart["stag"] = isol.stagIndex;
+
+            std::vector<double> jac_vec(glob.R_V_latest);
+            std::vector<int> jac_row_vec(glob.R_V_latest);
+            std::vector<int> jac_col_vec(glob.R_V_latest);
+            for (int k = 0; k < glob.R_V_latest; ++k){
+                jac_vec[k] = glob.R_V_vals[k];
+                jac_row_vec[k] = glob.R_V_rows[k] ;
+                jac_col_vec[k] = glob.R_V_cols[k] ;
+            }
+            restart["RVvals"] = jac_vec;
+            restart["RVrows"] = jac_row_vec;
+            restart["RVcols"] = jac_col_vec;
+            restart["RVnz"] = glob.R_V_latest;
+            // Write JSON file
+            std::ofstream fout("restart.json");
+            fout << restart.dump(4);   // pretty-print with indentation
+            #endif
+
             clear_RV(glob, isol, vsol, foil, param);
             converged = true;
             glob.convergenceIteration = i;
