@@ -290,7 +290,7 @@ void Integral_Length_scale(
     for (int i = 0; i < NblPoints; ++i)
     {
         l_mix[i] = (0.085 * delta * std::tanh( (k*y[i]) / (0.085*delta))) /
-                        std::sqrt( std::pow(1+B*(y[i]/delta), 6.0) );
+                        std::sqrt(1 + B*std::pow((y[i]/delta), 6.0));
         
         L2[i] = l_mix[i] / 0.41 ;
     }
@@ -345,7 +345,7 @@ void calc_WPS_TNO(
     // Compute shear velocity and min y from target y+
     Real u_t = std::sqrt(tauWall / rho);
 
-    const Real yplus_target = 1.0;  
+    const Real yplus_target = 3.0;  
     Real y_min = yplus_target * nu / u_t;
 
     

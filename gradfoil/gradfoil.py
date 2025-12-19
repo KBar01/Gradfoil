@@ -13,7 +13,7 @@ EXEC_FWD_codi = os.path.join(BIN_DIR, "CFoil_fwd_codi")
 EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
 
 
-def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,ncrit,custUinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,force,lateRestart,lateRestartNorm,chord):
+def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,ncrit,custUinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,force,lateRestart,lateRestartNorm,chord,double):
     
 
     cwd = os.getcwd()
@@ -54,10 +54,17 @@ def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,nc
         json.dump(data, f)
 
     # Run the executable for first time, no restarting, use codi version to ensure output match to AD version of code
-    initResult = subprocess.run([EXEC_FWD_codi],cwd=os.getcwd(), capture_output=True, text=True)
-    initConvergence = initResult.returncode
-    if initConvergence==1:
-        return True
+    if double:
+        initResult = subprocess.run([EXEC_FWD],cwd=os.getcwd(), capture_output=True, text=True)
+        initConvergence = initResult.returncode
+        if initConvergence==1:
+            return True
+    else:
+        initResult = subprocess.run([EXEC_FWD_codi],cwd=os.getcwd(), capture_output=True, text=True)
+        initConvergence = initResult.returncode
+        if initConvergence==1:
+            return True
+
 
     print("Initial run failed. Starting backstepping ...")
     
@@ -153,7 +160,8 @@ def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,nc
                 with open(in_json_path, "w") as f:
                     json.dump(data, f, indent=4)
                 
-                result = subprocess.run([EXEC_FWD_codi], cwd=os.getcwd(), capture_output=True, text=True)
+                if not double:
+                    result = subprocess.run([EXEC_FWD_codi], cwd=os.getcwd(), capture_output=True, text=True)
 
                 with open(in_json_path, "r") as f:
                     data = json.load(f)
@@ -204,7 +212,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,
     if repanel:
         success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
                                sampleTE,observerX,observerY,observerZ,span,model,
-                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord)
+                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord,0)
 
         if success:
             return success
@@ -215,7 +223,7 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,
                 print('trying different panel distribution ('+str(count)+'/6)')
                 success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
                                sampleTE,observerX,observerY,observerZ,span,model,
-                               rho,nu,ncrit,Uinf,returnFoilCps,uf,tef,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord)
+                               rho,nu,ncrit,Uinf,returnFoilCps,uf,tef,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord,0)
                 if success:
                     break
                 count +=1
@@ -225,9 +233,45 @@ def fwd_run(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,
     else:
         success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
                                sampleTE,observerX,observerY,observerZ,span,model,
-                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord)
+                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord,0)
         return success
+
+
+def fwd_run_d(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,
+            sampleTE=0.95,observerX=0.0,observerY=0.0,observerZ=1.2,span=0.5, model="kam",
+            rho=1.225, nu=1.789e-5, Uinf=0,ncrit=9.0,
+            Ufac=1.0,TEfac=0.09, repanel=0,
+            toptrans=0.5,bottrans=0.5,forcetrans=0,
+            returnFoilCps=0,lateRestart=0,lateRestartNorm=1e-5,chord=1.0):
     
+    
+    #xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,ncrit,custUinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,force,lateRestart,lateRestartNorm
+    if repanel:
+        success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
+                               sampleTE,observerX,observerY,observerZ,span,model,
+                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord,1)
+
+        if success:
+            return success
+        else:
+            count = 1 
+            for uf, tef in [(1.8,0.1), (2.1,0.09), (2.6,0.09), (1.0,0.09), (1.0,1.1), (1.5,0.09)]:
+                
+                print('trying different panel distribution ('+str(count)+'/6)')
+                success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
+                               sampleTE,observerX,observerY,observerZ,span,model,
+                               rho,nu,ncrit,Uinf,returnFoilCps,uf,tef,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord,1)
+                if success:
+                    break
+                count +=1
+        
+            return success
+    
+    else:
+        success = standard_run(xcoords,ycoords,Re,alphaDeg,Ma,
+                               sampleTE,observerX,observerY,observerZ,span,model,
+                               rho,nu,ncrit,Uinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,forcetrans,lateRestart,lateRestartNorm,chord,1)
+        return success
 
 
 def grad_run():
