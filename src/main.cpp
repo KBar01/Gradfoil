@@ -375,7 +375,6 @@ int main(){
     int doRestart = j["restart"].get<int>();
 
     Real sampleTE = j["sampleTE"].get<double>();
-    Real customUinf = j["Uinf"].get<double>();
     const Real X = j["X"].get<double>();
     const Real Y = j["Y"].get<double>();
     const Real Z = j["Z"].get<double>();

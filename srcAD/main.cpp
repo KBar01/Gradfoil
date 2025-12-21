@@ -170,18 +170,12 @@ int main(){
     RealVec2 rhoInf = j["rho"].get<double>();
     RealVec2 nuInf = j["nu"].get<double>();
     RealVec2 custChord = j["chord"].get<double>();
-    int doRestart = j["restart"].get<int>();
-    int fwdCodiRestart = j["fwdCodiRestart"].get<int>();
-    int doADRestart = j["ADrestart"].get<int>();
-    int doLaterestart = j["lateRestart"].get<int>();
     RealVec2 sampleTE = j["sampleTE"].get<double>();
-    RealVec2 customUinf = j["Uinf"].get<double>();
     const RealVec2 X = j["X"].get<double>();
     const RealVec2 Y = j["Y"].get<double>();
     const RealVec2 Z = j["Z"].get<double>();
     const RealVec2 S = j["S"].get<double>();
     const RealVec2 Ncrit = j["ncrit"].get<double>();
-    const int doCps = j["returnData"].get<int>();
     const RealVec2 Ufac = j["Ufac"].get<double>();
     const RealVec2 TEfac = j["TEfac"].get<double>();
     // forcing transition variables
@@ -196,10 +190,6 @@ int main(){
     RealRev Re_r = j["Re"].get<double>();
     RealRev Ma_r = j["Ma"].get<double>();
     RealRev rhoInf_r = j["rho"].get<double>();
-    RealRev nuInf_r = j["nu"].get<double>();
-    RealRev custChord_r = j["chord"].get<double>();
-    RealRev sampleTE_r = j["sampleTE"].get<double>();
-    RealRev customUinf_r = j["Uinf"].get<double>();
     const RealRev Ncrit_r = j["ncrit"].get<double>();
     const RealRev Ufac_r = j["Ufac"].get<double>();
     const RealRev TEfac_r = j["TEfac"].get<double>();
@@ -207,7 +197,6 @@ int main(){
     // forcing transition variables
     const RealRev topTransPos_r = j["toptrans"].get<double>();
     const RealRev botTransPos_r = j["bottrans"].get<double>();
-    
 
     // Open JSON file
     std::ifstream restartfile("restart.json");
