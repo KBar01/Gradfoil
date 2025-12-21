@@ -19,9 +19,7 @@ using json = nlohmann::json;
 bool runCode(
     
     // restart logic for optimisations
-    bool fwdDoubleRestart,
-    bool fwdCodiRestart,
-    bool ADrestart,
+    bool fromRestart,
     // geometry parameters
     const Real nCrit,
     const Real Ufac, 
@@ -49,8 +47,6 @@ bool runCode(
     const int doCps
 
     ){
-
-
     Real alpha = (alphad/180)*M_PI;
     Oper oper(alpha,Re,Ma);
     oper.rho = rhoInf;
@@ -120,7 +116,7 @@ bool runCode(
     calc_ue_m(foil,wake,isol,vsol);
     rebuild_ue_m(foil,wake,isol,vsol,false);
 
-    if (fwdCodiRestart){
+    if (fromRestart){
 
         std::ifstream prevfile("restart.json");
 
@@ -377,11 +373,6 @@ int main(){
     Real custChord = j["chord"].get<double>();
 
     int doRestart = j["restart"].get<int>();
-    int fwdCodiRestart = j["fwdCodiRestart"].get<int>();
-    int doADRestart = j["ADrestart"].get<int>();
-    int doLaterestart = j["lateRestart"].get<int>();
-    const Real lateRestartNorm = j["lateRestartNorm"].get<double>();
-
 
     Real sampleTE = j["sampleTE"].get<double>();
     Real customUinf = j["Uinf"].get<double>();
@@ -399,7 +390,7 @@ int main(){
     const Real topTransPos = j["toptrans"].get<double>();
     const Real botTransPos = j["bottrans"].get<double>();
 
-    bool converged = runCode(doRestart,fwdCodiRestart,doADRestart,
+    bool converged = runCode(doRestart,
         Ncrit,Ufac,TEfac,custChord,inXcoords,inYcoords,
         targetAlphaDeg,Re,Ma,rhoInf,nuInf,
         topTransPos,botTransPos,force,
