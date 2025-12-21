@@ -7,6 +7,7 @@
 #include "real_type.h"
 #include "panel_funcs.h"
 #include "data_structs.h"
+#include "linsolveInv.hpp"
 
 
 template<typename T>
@@ -14,24 +15,6 @@ using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 template<typename T>
 using Vector = Eigen::Matrix<T, Eigen::Dynamic, 1>;
  
-template<typename Type>
-void func(Matrix<Type> const& A, Vector<Type> const& rhs, Vector<Type>& sol) {
-  sol = A.colPivHouseholderQr().solve(rhs);
-}
- 
-template<typename Number>
-struct EigenSolver : public codi::EigenLinearSystem<Number, Matrix, Vector> {
-  public:
- 
-    using Base = codi::EigenLinearSystem<Number, Matrix, Vector>;  
-    using MatrixReal = typename Base::MatrixReal;                  
-    using VectorReal = typename Base::VectorReal;                  
- 
-    void solveSystem(MatrixReal const* A, VectorReal const* b, VectorReal* x) {
-        func(*A, *b, *x);
-    }
-};
-
 
 int colMajorIndex(int row, int col, int num_rows) {
     return row + col*num_rows;
@@ -73,45 +56,8 @@ int colMajorIndex(int row, int col, int num_rows) {
 
     }
 #else
-
-
     void solve_sys(Isol &isol, const Real* RHS) {
-        int Nsize = Ncoords + 1;  // Matrix dimensions
-
-        
-        Matrix<Real> A(Nsize, Nsize);
-        Vector<Real> rhs1(Nsize);
-        Vector<Real> rhs2(Nsize);
-        Vector<Real> sol(Nsize);
-        // Map the raw data to the Eigen matrices
-        for (int i = 0; i < Nsize; ++i) {
-            for (int j = 0; j < Nsize; ++j) {
-                A(i, j) = isol.infMatrix[colMajorIndex(i, j, Nsize)];
-            }
-            rhs1(i) = RHS[i];
-            rhs2(i) = RHS[Ncoords+1+i];
-        }
-        
-        // Solve Ax=b using Eigen's solver
-
-        // Note: x here is a Eigen matrix 
-        codi::solveLinearSystem(EigenSolver<Real>(), A, rhs1, sol);
-
-        // Ensure gamref is correctly mapped
-
-        // This is taking the array of isol struct and temporarily mapping an
-        // Eigen matrix to it, which allows easy update using solution as done in 
-        // next step
-        
-        for (int i=0; i<(Ncoords); ++i){
-            isol.gammasRef[i] = sol(i);
-        }
-
-        codi::solveLinearSystem(EigenSolver<Real>(), A, rhs2, sol);
-
-        for (int i=0; i<(Ncoords); ++i){
-            isol.gammasRef[Ncoords+i] = sol(i);
-        }
+        solve_sys_inv(isol,RHS);
     }
 #endif
 

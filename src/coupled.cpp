@@ -79,8 +79,12 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
 
     for (int i = 0; i < 60; ++i) {
         
+        auto bb = std::chrono::high_resolution_clock::now();
         build_glob_RV(foil, vsol, isol, glob, param,tdata);
-        
+        auto ba = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> build = ba-bb;
+        std::cout << "F build " << build.count() << " seconds\n";
+
         Real residualNorm = euc_norm(glob.R, Rsize);
 
         #ifdef FWD_CODI_VERSION
@@ -170,6 +174,8 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
             glob.convergenceIteration = i;
             break;
         }
+        
+
         
         solve_glob(foil, isol, glob, vsol, oper, 1);
         

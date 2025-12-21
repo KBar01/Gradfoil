@@ -19,7 +19,7 @@
 
 #include <chrono>
 #include <fstream>
-
+#include "sparselinsolve.hpp"
 using namespace std::chrono;
 
 
@@ -45,6 +45,8 @@ using namespace std::chrono;
 
 
 # ifdef USE_CODIPACK
+
+/*
 // helper for column-major indexing
 inline int colMajorIndex(int i, int j, int n) { return i + j * n; }
 
@@ -106,6 +108,10 @@ void solve_sys(Glob &glob) {
         glob.dU[i] = -sol(i);
     }
 }
+*/
+void solve_sys(Glob& glob) {
+    solve_sys_sparse(glob);
+};
 
 #else
 
@@ -214,9 +220,14 @@ void solve_glob(const Foil&foil, const Isol&isol, Glob& glob, Vsol& vsol, const 
         }
     }
 
+    auto sb = std::chrono::high_resolution_clock::now();
+        
     if (doSolve) {
         solve_sys(glob);
     }
+    auto sa = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> sl = sa-sb;
+    std::cout << "F solve " << sl.count() << " seconds\n";
 }
 
 
