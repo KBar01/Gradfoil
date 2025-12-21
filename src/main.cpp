@@ -50,19 +50,11 @@ bool runCode(
 
     ){
 
-    #if DO_BL_GRADIENT
-    Real outputs[16] ; 
-    #else
-    Real outputs[3] ;
-    #endif
 
     Real alpha = (alphad/180)*M_PI;
     Oper oper(alpha,Re,Ma);
     oper.rho = rhoInf;
 
-    //if (Uinf <= 0.0){   // indicates no custom Uinf given
-    //    Uinf = (Re*kinViscInf)/(chordScale) ;
-    //}
     Geom geom;
     
     Real flattenedCoords[2*Ncoords]={0};
@@ -118,8 +110,6 @@ bool runCode(
     Vsol vsol;
     Glob glob;
 
-    auto setb = std::chrono::high_resolution_clock::now();
-    
 
     build_gamma_codi(isol,foil,oper);
     init_thermo(oper,param,geom);
@@ -129,84 +119,35 @@ bool runCode(
     set_wake_gap(foil,isol,vsol);
     calc_ue_m(foil,wake,isol,vsol);
     rebuild_ue_m(foil,wake,isol,vsol,false);
-    
-    
 
-    #ifdef FWD_DOUBLE_VERSION
+    if (fwdCodiRestart){
 
-        // fwd_double run, dealing with restart from different alpha or not
-        if (fwdDoubleRestart){
+        std::ifstream prevfile("restart.json");
 
-            std::ifstream prevfile("prevRestart.json");
-            if (!prevfile) {
-                std::cerr << "Failed to open restart.json\n";
-                return 1;
-            }
+        json j;
+        prevfile >> j;
 
-            // Parse the JSON
-            json j;
-            prevfile >> j;
-
-            for (int i=0;i<RVdimension;++i){glob.U[i] = j["states"][i];}
-            for (int i=0;i<(Ncoords+Nwake);++i){vsol.turb[i] = j["turb"][i];}
-            
-            if (force){
-                tdata.isForced[0]  = 1;
-                tdata.isForced[1]  = 1;
-            }
-        }
-        else {
-            init_boundary_layer(oper,foil,param,isol,vsol,glob,tdata,force);
+        for (int i = 0; i < RVdimension; ++i) {
+        double val = j["states"][i].get<double>();
+        glob.U[i] = val;  // assigns numeric value to RealReverse
         }
 
-    #else  // doing FWD_CODI_VERSION
-
-        if (fwdCodiRestart){
-
-            std::ifstream prevfile("prevRestart.json");
-            if (!prevfile) {
-                std::cerr << "Failed to open restart.json\n";
-                return 1;
-            }
-
-            // Parse the JSON
-            json j;
-            prevfile >> j;
-
-            for (int i = 0; i < RVdimension; ++i) {
-            double val = j["states"][i].get<double>();
-            glob.U[i] = val;  // assigns numeric value to RealReverse
-            }
-
-            for (int i = 0; i < (Ncoords + Nwake); ++i) {
+        for (int i = 0; i < (Ncoords + Nwake); ++i) {
             bool val = j["turb"][i].get<bool>();
             vsol.turb[i] = val;
-            }
-
-            if (force){
-                tdata.isForced[0]  = 1;
-                tdata.isForced[1]  = 1;
-            }
         }
-        else {
-            init_boundary_layer(oper,foil,param,isol,vsol,glob,tdata,force);
+
+        if (force){
+            tdata.isForced[0]  = 1;
+            tdata.isForced[1]  = 1;
         }
-    #endif
-
-    stagpoint_move(isol,glob,foil,wake,vsol);
-
-    auto seta = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> p = seta-setb;
-    std::cout << "setup " << p.count() << " seconds\n";
+    }
+    else {
+        init_boundary_layer(oper,foil,param,isol,vsol,glob,tdata,force);
+    }
     
-    auto coupb = std::chrono::high_resolution_clock::now();
+    stagpoint_move(isol,glob,foil,wake,vsol);
     bool converged = solve_coupled(oper,foil,wake,param,vsol,isol,glob,tdata,force);
-
-    auto coupa = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> coup = coupa-coupb;
-    std::cout << "coupled solve " << coup.count() << " seconds\n";
-
-    auto outb = std::chrono::high_resolution_clock::now();
     Post post;
     calc_force(oper,geom,param,isol,foil,glob,post);
     
@@ -217,16 +158,16 @@ bool runCode(
     if (doCps){
         Real cf_U[4]={0};
         for (int i=0;i<Ncoords;++i){
-            tauWall[i] = get_cf(glob.U[colMajorIndex(0,i,4)],
-                                glob.U[colMajorIndex(1,i,4)],
-                                glob.U[colMajorIndex(2,i,4)],
-                                glob.U[colMajorIndex(3,i,4)],
-                                vsol.turb[i],
-                                false,
-                                param,
-                                cf_U
+            tauWall[i] = get_cf(
+                glob.U[colMajorIndex(0,i,4)],
+                glob.U[colMajorIndex(1,i,4)],
+                glob.U[colMajorIndex(2,i,4)],
+                glob.U[colMajorIndex(3,i,4)],
+                vsol.turb[i],
+                false,
+                param,
+                cf_U
             );
-            
             tauWall[i] *=  (oper.rho*(glob.U[colMajorIndex(3,i,4)]*Uinf * glob.U[colMajorIndex(3,i,4)]*Uinf))/2;
         }
     }
@@ -242,258 +183,114 @@ bool runCode(
 
     interpolate_at_95_both_surfaces(xcoords,glob.U,post.cp,oper,vsol,param,topsurf,botsurf,Uinf,sampleTE,chordScaling);
     Real OASPL = calc_OASPL(botsurf,topsurf,chordScaling,Uinf,X,Y,Z,S,kinViscInf,rhoInf,doCps,model);
+
+    // check OASPL validity
+    if (std::isnan(OASPL) || std::isinf(OASPL)) {
+        converged = false;
+    }
     
-    std::vector<std::string> outputNames = {"CL", "CD", "OASPL","CM"};
+    if (converged){
 
-
-    auto outa = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> outtime = outa - outb;
-    std::cout << "outputs " << outtime.count() << " seconds\n";
-    # ifdef FWD_CODI_VERSION
-    
-        // check OASPL validity
-        if (std::isnan(OASPL) || std::isinf(OASPL)) {
-            converged = false;
-        }
+        json out;
         
-        if (converged){
+        out["conv"] = 1;
+        out["aerofoilChord"] = chordScaling.getValue();
+        out["freestreamVelocity"] = Uinf.getValue();
+        out["samplingLoc"] = sampleTE.getValue();
+        out["CL"]  = post.cl.getValue();
+        out["CD"]  = post.cd.getValue();
+        out["CM"]  = post.cm.getValue();
+        out["OASPL"] = OASPL.getValue();
 
-            json out;
-            #if DO_BL_GRADIENT
-
-                
-                    
-                out["CL"]  = post.cl.getValue();
-                out["CD"]  = post.cd.getValue();
-                
-                
-                out[outputNames[2]] = thetatop.getValue();
-                out[outputNames[3]] = deltaStop.getValue();
-                out[outputNames[4]] = CtauMaxtop.getValue();
-                out[outputNames[5]] = Uetop.getValue();
-                out[outputNames[6]] = dCpdxtop.getValue();
-                out[outputNames[7]] = Cftop.getValue();
-                out[outputNames[8]] = deltatop.getValue();
-
-                out[outputNames[9]] = thetabot.getValue();
-                out[outputNames[10]] = deltaSbot.getValue();
-                out[outputNames[11]] = CtauMaxbot.getValue();
-                out[outputNames[12]] = Uebot.getValue();
-                out[outputNames[13]] = dCpdxbot.getValue();
-                out[outputNames[14]] = Cfbot.getValue();
-                out[outputNames[15]] = deltabot.getValue();
-
-                out["conv"] = 1;
-            #else
-                out["conv"] = 1;
-                out["aerofoilChord"] = chordScaling.getValue();
-                out["freestreamVelocity"] = Uinf.getValue();
-                out["CL"]  = post.cl.getValue();
-                out["CD"]  = post.cd.getValue();
-                out["CM"]  = post.cm.getValue();
-                out["OASPL"] = OASPL.getValue();
-
-                if (doCps){
-                    
-                    json restart;
-                    std::vector<double> states_d(RVdimension);
-                    // Extract numeric values from CoDiPack types
-                    for (size_t i = 0; i < RVdimension; ++i){
-                        states_d[i] = glob.U[i].getValue();
-                    } 
-                    restart["states"] = states_d;
-                    restart["turb"]   = vsol.turb;
-                    std::ofstream restartFile("restart.json");
-                    restartFile << restart.dump(4);  // pretty print with 4 spaces indentation
-                    restartFile.close();
-
-                    //  calc transition point
-                    Real botTransX = geom.chord;
-                    for(int i=0;i<isol.stagIndex[0];++i){
-                        int isTurb = vsol.turb[isol.stagIndex[0] - i];
-                        if (isTurb){
-                            botTransX = foil.x[colMajorIndex(0,isol.stagIndex[0]-i,2)];
-                            break;
-                        } 
-                    }
-                    Real topTransX = geom.chord;
-                    for(int i=0;i<200-isol.stagIndex[1];++i){
-                        int isTurb = vsol.turb[isol.stagIndex[1] + i];
-                        if (isTurb){
-                            topTransX = foil.x[colMajorIndex(0,isol.stagIndex[1]+i,2)];
-                            break;
-                        } 
-                    }
-
-                    double inner[2*Ncoords] ;
-                    double cps[Ncoords];
-                    double tauWallOut[Ncoords];
-                    for (int i=0;i<(2*Ncoords);++i){
-                        inner[i] = foil.x[i].getValue() ;
-                    }
-
-                    for (int i=0;i<(Ncoords);++i){
-                        cps[i] = post.cp[i].getValue();
-                        tauWallOut[i] = tauWall[i].getValue();
-                    }
-                    out["innerFoil"] = inner;
-                    out["Cp"] = cps;
-                    out["tauWall"] = tauWallOut;
-                    
-                    out["stagnation"] = isol.stagIndex;
-                    out["topTransX"]  = topTransX.getValue();
-                    out["botTransX"]  = botTransX.getValue();
-                    
-                    
-                    //out["tauWall"] = tauWall;
-                    std::vector<std::string> BLoutputNames = {"CL", "CD",
-                        "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
-                        "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"
-                    };
-                    out[BLoutputNames[2]] = topsurf[0].getValue();
-                    out[BLoutputNames[3]] = topsurf[1].getValue();
-                    out[BLoutputNames[4]] = topsurf[2].getValue();
-                    out[BLoutputNames[5]] = topsurf[3].getValue();
-                    out[BLoutputNames[6]] = topsurf[4].getValue();
-                    out[BLoutputNames[7]] = topsurf[5].getValue();
-                    out[BLoutputNames[8]] = topsurf[6].getValue();
-
-                    out[BLoutputNames[9]] = botsurf[0].getValue();
-                    out[BLoutputNames[10]] = botsurf[1].getValue();
-                    out[BLoutputNames[11]] = botsurf[2].getValue();
-                    out[BLoutputNames[12]] = botsurf[3].getValue();
-                    out[BLoutputNames[13]] = botsurf[4].getValue();
-                    out[BLoutputNames[14]] = botsurf[5].getValue();
-                    out[BLoutputNames[15]] = botsurf[6].getValue();
-                }
-            #endif
+        if (doCps){
             
-            std::ofstream outFile("out.json");
-            outFile << out.dump(4);  // pretty print with 4 spaces indentation
-            outFile.close();
-            
-        }
-        else{
+            json restart;
+            //std::vector<double> states_d(RVdimension);
+            // Extract numeric values from CoDiPack types
+            //for (size_t i = 0; i < RVdimension; ++i){
+            //    states_d[i] = glob.U[i].getValue();
+            //} 
+            //restart["states"] = states_d;
+            //restart["turb"]   = vsol.turb;
+            //std::ofstream restartFile("restart.json");
+            //restartFile << restart.dump(4);  // pretty print with 4 spaces indentation
+            //restartFile.close();
 
-            json out;
-            out["conv"] = 0;
-            std::ofstream outFile("out.json");
-            outFile << out.dump(4);  // pretty print with 4 spaces indentation
-            outFile.close();
-
-        }
-
-    #elif FWD_DOUBLE_VERSION
-        // check OASPL validity
-        
-        if (std::isnan(OASPL)   // caught NaNs
-            || std::isinf(OASPL)) // caught infs     
-        {
-            converged = false;
-        }
-
-        if (converged){
-
-            json out;
-            
-            out["conv"] = 1;
-            out["aerofoilChord"] = chordScaling;
-            out["freestreamVelocity"] = Uinf;
-            out["CL"]  = post.cl;
-            out["CD"]  = post.cd;
-            out["CM"]  = post.cm;
-            out["OASPL"] = OASPL;
-
-            if (doCps){
-                
-                json restart;
-                std::vector<double> states_d(RVdimension);
-                // Extract numeric values from CoDiPack types
-                for (size_t i = 0; i < RVdimension; ++i){
-                    states_d[i] = glob.U[i];
+            //  calc transition point
+            Real botTransX = geom.chord;
+            for(int i=0;i<isol.stagIndex[0];++i){
+                int isTurb = vsol.turb[isol.stagIndex[0] - i];
+                if (isTurb){
+                    botTransX = foil.x[colMajorIndex(0,isol.stagIndex[0]-i,2)];
+                    break;
                 } 
-                restart["states"] = states_d;
-                restart["turb"]   = vsol.turb;
-                std::ofstream restartFile("restart.json");
-                restartFile << restart.dump(4);  // pretty print with 4 spaces indentation
-                restartFile.close();
-
-                //  calc transition point
-                Real botTransX = geom.chord;
-                for(int i=0;i<isol.stagIndex[0];++i){
-                    int isTurb = vsol.turb[isol.stagIndex[0] - i];
-                    if (isTurb){
-                        botTransX = foil.x[colMajorIndex(0,isol.stagIndex[0]-i,2)];
-                        break;
-                    } 
-                }
-                Real topTransX = geom.chord;
-                for(int i=0;i<200-isol.stagIndex[1];++i){
-                    int isTurb = vsol.turb[isol.stagIndex[1] + i];
-                    if (isTurb){
-                        topTransX = foil.x[colMajorIndex(0,isol.stagIndex[1]+i,2)];
-                        break;
-                    } 
-                }
-
-                double inner[2*Ncoords] ;
-                double cps[Ncoords];
-                double tauWallOut[Ncoords];
-                for (int i=0;i<(2*Ncoords);++i){
-                    inner[i] = foil.x[i];
-                }
-
-                for (int i=0;i<(Ncoords);++i){
-                    cps[i] = post.cp[i];
-                    tauWallOut[i] = tauWall[i];
-                }
-                out["innerFoil"] = inner;
-                out["Cp"] = cps;
-                out["tauWall"] = tauWallOut;
-                
-                out["stagnation"] = isol.stagIndex;
-                out["topTransX"]  = topTransX;
-                out["botTransX"]  = botTransX;
-                
-                
-                //out["tauWall"] = tauWall;
-                std::vector<std::string> BLoutputNames = {"CL", "CD",
-                    "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
-                    "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"
-                };
-                out[BLoutputNames[2]] = topsurf[0];
-                out[BLoutputNames[3]] = topsurf[1];
-                out[BLoutputNames[5]] = topsurf[3];
-                out[BLoutputNames[6]] = topsurf[4];
-                out[BLoutputNames[7]] = topsurf[5];
-                out[BLoutputNames[8]] = topsurf[6];
-
-                out[BLoutputNames[9]] = botsurf[0];
-                out[BLoutputNames[10]] = botsurf[1];
-                out[BLoutputNames[11]] = botsurf[2];
-                out[BLoutputNames[12]] = botsurf[3];
-                out[BLoutputNames[13]] = botsurf[4];
-                out[BLoutputNames[14]] = botsurf[5];
-                out[BLoutputNames[15]] = botsurf[6];
             }
+            Real topTransX = geom.chord;
+            for(int i=0;i<200-isol.stagIndex[1];++i){
+                int isTurb = vsol.turb[isol.stagIndex[1] + i];
+                if (isTurb){
+                    topTransX = foil.x[colMajorIndex(0,isol.stagIndex[1]+i,2)];
+                    break;
+                } 
+            }
+
+            double inner[2*Ncoords] ;
+            double cps[Ncoords];
+            double tauWallOut[Ncoords];
+            for (int i=0;i<(2*Ncoords);++i){
+                inner[i] = foil.x[i].getValue() ;
+            }
+
+            for (int i=0;i<(Ncoords);++i){
+                cps[i] = post.cp[i].getValue();
+                tauWallOut[i] = tauWall[i].getValue();
+            }
+            out["innerFoil"] = inner;
+            out["Cp"] = cps;
+            out["tauWall"] = tauWallOut;
+            
+            out["stagnation"] = isol.stagIndex;
+            out["topTransX"]  = topTransX.getValue();
+            out["botTransX"]  = botTransX.getValue();
             
             
-            std::ofstream outFile("out.json");
-            outFile << out.dump(4);  // pretty print with 4 spaces indentation
-            outFile.close();
-            
+            //out["tauWall"] = tauWall;
+            std::vector<std::string> BLoutputNames = {"CL", "CD",
+                "thetaUpper", "deltaStarUpper", "tauMaxUpper","edgeVelocityUpper", "dpdxUpper", "tauWallUpper", "delta99Upper",
+                "thetaLower", "deltaStarLower", "tauMaxLower","edgeVelocityLower", "dpdxLower", "tauWallLower", "delta99Lower"
+            };
+            out[BLoutputNames[2]] = topsurf[0].getValue();
+            out[BLoutputNames[3]] = topsurf[1].getValue();
+            out[BLoutputNames[4]] = topsurf[2].getValue();
+            out[BLoutputNames[5]] = topsurf[3].getValue();
+            out[BLoutputNames[6]] = topsurf[4].getValue();
+            out[BLoutputNames[7]] = topsurf[5].getValue();
+            out[BLoutputNames[8]] = topsurf[6].getValue();
+
+            out[BLoutputNames[9]] = botsurf[0].getValue();
+            out[BLoutputNames[10]] = botsurf[1].getValue();
+            out[BLoutputNames[11]] = botsurf[2].getValue();
+            out[BLoutputNames[12]] = botsurf[3].getValue();
+            out[BLoutputNames[13]] = botsurf[4].getValue();
+            out[BLoutputNames[14]] = botsurf[5].getValue();
+            out[BLoutputNames[15]] = botsurf[6].getValue();
         }
-        else{
+        
+        
+        std::ofstream outFile("out.json");
+        outFile << out.dump(4);  // pretty print with 4 spaces indentation
+        outFile.close();
+        
+    }
+    else{
 
-            json out;
-            out["conv"] = 0;
-            std::ofstream outFile("out.json");
-            outFile << out.dump(4);  // pretty print with 4 spaces indentation
-            outFile.close();
+        json out;
+        out["conv"] = 0;
+        std::ofstream outFile("out.json");
+        outFile << out.dump(4);  // pretty print with 4 spaces indentation
+        outFile.close();
 
-        }
-
-    # endif
+    }
 
     return converged;
 };

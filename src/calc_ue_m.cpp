@@ -9,49 +9,9 @@
 #include "linSolveMatrix.hpp"
 
 
-#ifndef USE_CODIPACK
-void solve_sys(Isol&isol, const Real* RHS, Real*Bp) {
-    int Nsize = Ncoords + 1;  // Matrix dimensions
-
-    // Wrap the flattened column-major AIC vector into an Eigen matrix
-    Eigen::Map<const Eigen::Matrix <Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>> 
-        A_eigen(isol.infMatrix, Nsize, Nsize);
-
-    // Wrap the flattened column-major RHS vector into an Eigen matrix
-    // Eigen-map is class that maps raw data (like c++ array) to eigen matrix/vector
-    // WITHOUT copying data.
-    // Inputs to this class are datatype (double in this case), dynamic means non-fixed at compile time
-    // TODO: eigen sizes should be static.
-    // ColMajor specifies how data is stored, matching arrays
-
-    Eigen::Map<const Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>> 
-        rhs_eigen(RHS, Ncoords+1, Ncoords+Nwake-2);
-    
-    // Solve Ax=b using Eigen's solver
-
-    // Note: x here is a Eigen matrix 
-    Eigen::MatrixXd x = -A_eigen.colPivHouseholderQr().solve(rhs_eigen);
-
-    // Ensure gamref is correctly mapped
-
-    // This is taking the array of isol struct and temporarily mapping an
-    // Eigen matrix to it, which allows easy update using solution as done in 
-    // next step
-    Eigen::Map<Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>> 
-        x_eigen(Bp, Ncoords,Ncoords+Nwake-2);
-
-    // Store solution in Bp
-    x_eigen = x.block(0,0,Ncoords,Ncoords+Nwake-2);
-
-}
-#else
-
 void solve_sys(Isol&isol, const Real* RHS, Real*Bp){
-
     solve_sys_ue(isol,RHS,Bp);
 }
-
-#endif
 
 void compute_Dw(const Real* Cgam, const Real* Bp, const Real* Csig, Real* Dw){
 
@@ -139,13 +99,6 @@ void calc_ue_m(const Foil&foil,const Wake&wake,Isol&isol,Vsol &vsol) {
     // Solve Bp = -AIC^{-1} * B (note B is (Ncoords+1)xnpan)
     Real Bp[Ncoords * nPanels];
     solve_sys(isol,B,Bp);
-    
-    
-    //for (int i=0;i<Ncoords;++i){
-    //  std::cout << "Bp[" <<i<<"] = " << Bp[i] << std::endl;
-    //}
-
-    //std::cout << Bp[colMajorIndex(Ncoords-1,nPanels-1,Ncoords)] << std::endl;
 
     // Csig: Nwake x npan
     Real Csig[Nwake * nPanels]={0.0};

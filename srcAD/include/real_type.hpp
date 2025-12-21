@@ -1,12 +1,15 @@
-#ifndef REAL_TYPE_H
-#define REAL_TYPE_H
-
-
+#pragma once
 
 #include <codi.hpp>
-using Real = codi::RealReverse;
-using Tape = typename Real::Tape;
 
+int colMajorIndex(int row, int col, int num_rows) {
+    return row + col*num_rows;
+}
+
+template<typename Real>
+Real norm2(const Real* x) {
+    return std::sqrt(x[0]*x[0] + x[1]*x[1]);
+}
 #define IDX(i,j,nrow) ((i)+(j)*(nrow)) // For col-major access
 #define Nwake 30
 #define RVdimension 920
@@ -16,4 +19,3 @@ using Tape = typename Real::Tape;
 #define Nsound 250
 #define NblPoints 250
 
-#endif

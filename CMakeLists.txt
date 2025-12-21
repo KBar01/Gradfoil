@@ -37,57 +37,19 @@ FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download
 FetchContent_MakeAvailable(json)
 
 #############################################
-# Includes
-#############################################
-set(COMMON_INCLUDES ${PROJECT_SOURCE_DIR}/src/include)
-set(NOISE_INCLUDES ${PROJECT_SOURCE_DIR}/src/noise_includes)
 
-#############################################
-# Sources
-#############################################
+set(COMMON_INCLUDES_FWD ${PROJECT_SOURCE_DIR}/src/include)
+set(NOISE_INCLUDES_FWD ${PROJECT_SOURCE_DIR}/src/noise_includes)
+
 file(GLOB_RECURSE SOURCES src/*.cpp)
 list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
-#############################################
-# Executable
-#############################################
-add_executable(CFoil_fwd_double src/main.cpp ${SOURCES})
-
-target_link_libraries(CFoil_fwd_double PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
-
-target_include_directories(CFoil_fwd_double PRIVATE
- ${COMMON_INCLUDES}
- ${NOISE_INCLUDES}
- ${codipack_SOURCE_DIR}/include
-)
-
-target_compile_definitions(CFoil_fwd_double PRIVATE
-  -DCODI_EnableEigen
-  -DFWD_DOUBLE_VERSION
-  -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
-)
-
-#############################################
-# Compiler flags
-#############################################
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  target_compile_options(CFoil_fwd_double PRIVATE 
-    -O2
-    -fno-fast-math
-  )
-endif()
-
-
-########### fwd using codi ###########################
-
-
 add_executable(CFoil_fwd_codi src/main.cpp ${SOURCES})
-
 target_link_libraries(CFoil_fwd_codi PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
 
 target_include_directories(CFoil_fwd_codi PRIVATE
- ${COMMON_INCLUDES}
- ${NOISE_INCLUDES}
+ ${COMMON_INCLUDES_FWD}
+ ${NOISE_INCLUDES_FWD}
  ${codipack_SOURCE_DIR}/include
 )
 
@@ -98,11 +60,32 @@ target_compile_definitions(CFoil_fwd_codi PRIVATE
   -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
 )
 
-#############################################
-# Compiler flags
-#############################################
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   target_compile_options(CFoil_fwd_codi PRIVATE 
+    -O2
+    -fno-fast-math
+  )
+endif()
+
+######## the AD version ######
+
+set(COMMON_INCLUDES_AD ${PROJECT_SOURCE_DIR}/srcAD/include)
+set(NOISE_INCLUDES_AD ${PROJECT_SOURCE_DIR}/srcAD/noise_includes)
+add_executable(CFoil_AD srcAD/main.cpp srcAD/error_package.cpp)
+target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
+target_include_directories(CFoil_AD PRIVATE
+ ${COMMON_INCLUDES_AD}
+ ${NOISE_INCLUDES_AD}
+ ${codipack_SOURCE_DIR}/include
+)
+target_compile_definitions(CFoil_AD PRIVATE
+  -DUSE_CODIPACK
+  -DCODI_EnableEigen
+  -DAD_VERSION
+  -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
+)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  target_compile_options(CFoil_AD PRIVATE 
     -O2
     -fno-fast-math
   )

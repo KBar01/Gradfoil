@@ -1,19 +1,36 @@
+#pragma once
+
 #include <cmath>
 #include <complex>
 #include "Faddeeva.hh"
-#include "real_type.h"
+#include "real_type.hpp"
 
 
 using std::complex;
 using std::exp;
 
+template<typename Real> struct Isolc;
+template<typename Real> struct Isolv;
+template<typename Real> struct Vsol;
+template<typename Real> struct Foil;
+template<typename Real> struct Param;
+template<typename Real> struct Post;
+template<typename Real> struct Oper;
+template<typename Real> struct Geom;
+template<typename Real> struct Wake;
+template<typename Real> struct Glob;
+template<typename Real> struct Trans;
+
+
 // multiply (ar + i ai)*(br + i bi)
+template<typename Real>
 inline void cmul(Real ar, Real ai, Real br, Real bi, Real &cr, Real &ci) {
     cr = ar*br - ai*bi;
     ci = ar*bi + ai*br;
 }
 
 // divide (ar + i ai)/(br + i bi)
+template<typename Real>
 inline void cdiv(Real ar, Real ai, Real br, Real bi, Real &cr, Real &ci) {
     Real den = br*br + bi*bi;
     cr = (ar*br + ai*bi)/den;
@@ -21,6 +38,7 @@ inline void cdiv(Real ar, Real ai, Real br, Real bi, Real &cr, Real &ci) {
 }
 
 // exp(ar+i ai)
+template<typename Real>
 inline void cexp(Real ar, Real ai, Real &er, Real &ei) {
     Real e = std::exp(ar);
     er = e*std::cos(ai);
@@ -28,6 +46,7 @@ inline void cexp(Real ar, Real ai, Real &er, Real &ei) {
 }
 
 // sqrt(ar+i ai)
+template<typename Real>
 inline void csqrt(Real ar, Real ai, Real &sr, Real &si) {
     Real r = std::sqrt(std::hypot(ar,ai));
     Real t = std::atan2(ai,ar)/2.0;
@@ -35,7 +54,7 @@ inline void csqrt(Real ar, Real ai, Real &sr, Real &si) {
     si = std::sqrt(r)*std::sin(t);
 }
 
-
+template<typename Real>
 inline void complex_sqrt(Real ar, Real ai,
                          Real &br, Real &bi)
 {
@@ -63,44 +82,57 @@ inline void complex_sqrt(Real ar, Real ai,
     }
 }
 
-
+template<typename Real>
 void errFunc(Real in_r,Real in_i, Real &out_r, Real &out_i){
 
-    double x_val = in_r.getValue() ;
-    //double x_val = in_r ;
-    double y_val = in_i.getValue() ;
-    //double y_val = in_i ;
-    complex<double> z(x_val,y_val) ;
+    
+    # ifdef USE_CODIPACK
+        double x_val = in_r.getValue() ;
+        //double x_val = in_r ;
+        double y_val = in_i.getValue() ;
+        //double y_val = in_i ;
+        complex<double> z(x_val,y_val) ;
+        complex<double> w = Faddeeva::erf(z);
+        
+        std::complex<double> dw_dz = (2.0 / sqrt(M_PI)) * exp(-z * z); // Derivative
+
+        // Compute real and imag parts of Jacobian
+        double du_dx = dw_dz.real();        // ∂Re(w)/∂x
+        double du_dy = -dw_dz.imag();       // ∂Re(w)/∂y
+        double dv_dx = dw_dz.imag();        // ∂Im(w)/∂x
+        double dv_dy = dw_dz.real();        // ∂Im(w)/∂y
+        
+        // Push statement for u = Re(w)
+        codi::StatementPushHelper<Real> ph;
+        ph.startPushStatement();
+        ph.pushArgument(in_r, du_dx);
+        ph.pushArgument(in_i, du_dy);
+        ph.endPushStatement(out_r, w.real());
+
+
+        // Push statement for v = Im(w)
+
+        codi::StatementPushHelper<Real> phIm;
+        phIm.startPushStatement();
+        phIm.pushArgument(in_r, dv_dx);
+        phIm.pushArgument(in_i, dv_dy);
+        phIm.endPushStatement(out_i, w.imag());
+    #else
+
+    complex<double> z(in_r,in_i) ;
     complex<double> w = Faddeeva::erf(z);
-    
-    std::complex<double> dw_dz = (2.0 / sqrt(M_PI)) * exp(-z * z); // Derivative
 
-    // Compute real and imag parts of Jacobian
-    double du_dx = dw_dz.real();        // ∂Re(w)/∂x
-    double du_dy = -dw_dz.imag();       // ∂Re(w)/∂y
-    double dv_dx = dw_dz.imag();        // ∂Im(w)/∂x
-    double dv_dy = dw_dz.real();        // ∂Im(w)/∂y
-    
-    // Push statement for u = Re(w)
-    codi::StatementPushHelper<Real> ph;
-    ph.startPushStatement();
-    ph.pushArgument(in_r, du_dx);
-    ph.pushArgument(in_i, du_dy);
-    ph.endPushStatement(out_r, w.real());
+    out_r = w.real();
+    out_i = w.imag();
+
+    #endif
 
 
-    // Push statement for v = Im(w)
-
-    codi::StatementPushHelper<Real> phIm;
-    phIm.startPushStatement();
-    phIm.pushArgument(in_r, dv_dx);
-    phIm.pushArgument(in_i, dv_dy);
-    phIm.endPushStatement(out_i, w.imag());
 }
 
 
 /////////////////////////////////////////// This is amiet model as given in R&M ///////////////////
-
+template<typename Real>
 void wavesnumbers(
     // wavesnumbers: compute wavenumber-related quantities from input scalars
 
@@ -170,6 +202,7 @@ void wavesnumbers(
 
 
 // x is real Real
+template<typename Real>
 void Fresnel_int(Real x,
                  Real &E_real,
                  Real &E_imag)
@@ -191,6 +224,7 @@ void Fresnel_int(Real x,
 }
 
 // x is real (Real)
+template<typename Real>
 inline void Fresnel_int_conj(Real xr, Real xi,
                              Real &Er, Real &Ei)
 {
@@ -199,7 +233,7 @@ inline void Fresnel_int_conj(Real xr, Real xi,
 
     // compute (1+1i)*sqrt(0.5*x)
     Real sr, si; 
-    complex_sqrt(0.5*xr, 0.5*xi, sr, si); // reuse the sqrt we wrote earlier
+    complex_sqrt<Real>(0.5*xr, 0.5*xi, sr, si); // reuse the sqrt we wrote earlier
     // multiply (1+1i)*(sr+isi)
     Real mr = (1.0)*sr - (1.0)*si; // real part
     Real mi = (1.0)*sr + (1.0)*si; // imag part
@@ -222,6 +256,7 @@ inline void Fresnel_int_conj(Real xr, Real xi,
     Ei = 0.5*(b - a);
 }
 
+template<typename Real>
 inline void Phi_0_img_new(Real sqrt_r, Real sqrt_i,
                           Real &Phi_r, Real &Phi_i)
 {
@@ -244,12 +279,13 @@ inline void Phi_0_img_new(Real sqrt_r, Real sqrt_i,
     Phi_i = Er + Ei;
 }
 
+template<typename Real>
 inline void Radiation_integral1(Real B, Real C,
                                 Real &f1r, Real &f1i)
 {
     // Fresnel integrals
-    Real a_r,a_i; Fresnel_int_conj(2.0*(B-C),0.0,a_r,a_i);
-    Real b_r,b_i; Fresnel_int_conj(2.0*B,0.0,b_r,b_i);
+    Real a_r,a_i; Fresnel_int_conj<Real>(2.0*(B-C),0.0,a_r,a_i);
+    Real b_r,b_i; Fresnel_int_conj<Real>(2.0*B,0.0,b_r,b_i);
 
     // prefactor = -exp(2 i C)/(i C)
     Real cos2C=std::cos(2.0*C), sin2C=std::sin(2.0*C);
@@ -271,7 +307,7 @@ inline void Radiation_integral1(Real B, Real C,
     // term1 = (1+i)*exp(-2iC)*s*a/sqrt(2(B-C))
     //Real sc=std::sqrt(2.0*(B-C));
     Real sc_r, sc_i;
-    complex_sqrt(2.0*(B-C), 0.0, sc_r, sc_i);
+    complex_sqrt<Real>(2.0*(B-C), 0.0, sc_r, sc_i);
 
     // first multiply (1+i)*exp(-2iC)
     Real tmp_r=onepI_r*e_2C_r - onepI_i*e_2C_i;
@@ -301,7 +337,7 @@ inline void Radiation_integral1(Real B, Real C,
     f1i=pref_r*br_i + pref_i*br_r;
 }
 
-
+template<typename Real>
 void Radiation_integral2(
     Real B, Real K_bar, Real k_min_bar, Real mu_bar, Real S0,
     Real K_1_bar, Real alpha, Real x, Real M,
@@ -312,7 +348,7 @@ void Radiation_integral2(
 
     // --- E = exp(4i*k_min_bar)*(1 - (1+i)*Fresnel_int_conj(4*k_min_bar))
     Real Fr,Fi;
-    Fresnel_int_conj(4.0*k_min_bar,0.0,Fr,Fi);
+    Fresnel_int_conj<Real>(4.0*k_min_bar,0.0,Fr,Fi);
     // (1+i)*Fresnel
     Real t1r=1.0*Fr -1.0*Fi;
     Real t1i=1.0*Fi +1.0*Fr;
@@ -351,7 +387,7 @@ void Radiation_integral2(
     Real coeffi=(1.0+error)*m1i/denC;
     epr=std::cos(4.0*k_min_bar);
     epi=std::sin(4.0*k_min_bar);
-    Fresnel_int_conj(4.0*k_min_bar,0.0,Fr,Fi);
+    Fresnel_int_conj<Real>(4.0*k_min_bar,0.0,Fr,Fi);
     // multiply exp * Fresnel
     Real tmp_r=epr*Fr - epi*Fi;
     Real tmp_i=epr*Fi + epi*Fr;
@@ -366,7 +402,7 @@ void Radiation_integral2(
     Real coeffDi=(1.0-error)*p1i/denD;
     epr=std::cos(-4.0*k_min_bar);
     epi=std::sin(-4.0*k_min_bar);
-    Fresnel_int(4.0*k_min_bar,Fr,Fi);
+    Fresnel_int<Real>(4.0*k_min_bar,Fr,Fi);
     tmp_r=epr*Fr - epi*Fi;
     tmp_i=epr*Fi + epi*Fr;
     Real G_dr=coeffDr*tmp_r - coeffDi*tmp_i;
@@ -393,7 +429,7 @@ void Radiation_integral2(
 
 
 
-    Fresnel_int_conj(2.0*D,0.0,Fr,Fi);
+    Fresnel_int_conj<Real>(2.0*D,0.0,Fr,Fi);
     // multiply e2 *Fresnel*sqrtfactor
     tmp_r=e2r*Fr - e2i*Fi;
     tmp_i=e2r*Fi + e2i*Fr;
@@ -451,7 +487,7 @@ void Radiation_integral2(
     f2i=Hr*totali + Hi*totalr;
 }
 
-// your main function:
+template<typename Real>
 void Radiation_integral1_subcrit(
     Real C,
     Real A1prime_r, Real A1prime_i,
@@ -540,6 +576,7 @@ void Radiation_integral1_subcrit(
     outImag = m_real * inner_imag + m_imag * inner_real;
 }
 
+template<typename Real>
 inline void Radiation_integral2_subcrit(
     Real A_prime_r, Real A_prime_i,
     Real A1_prime_r, Real A1_prime_i,
@@ -597,7 +634,7 @@ inline void Radiation_integral2_subcrit(
     // erf(sqrt(4*k_min)) (real arg)
     Real sqarg = std::sqrt(4.0*k_min_bar_prime);
     Real erf_r,erf_i;
-    errFunc(sqarg,0.0,erf_r,erf_i);
+    errFunc<Real>(sqarg,0.0,erf_r,erf_i);
 
     // (1 - erf)
     Real omr = 1.0 - erf_r;
@@ -636,6 +673,7 @@ inline void Radiation_integral2_subcrit(
     out_i = pre_r*Hbr_i + pre_i*Hbr_r;
 }
 
+template<typename Real>
 inline void Wavenumbers_subcrit(
     const Real M,
     Real mu_bar, Real K_1_bar, Real K_2_bar, Real K_bar, Real beta,
@@ -667,6 +705,7 @@ inline void Wavenumbers_subcrit(
     complex_sqrt(rr, ri, Tr, Ti);
 }
 
+template<typename Real>
 void Radiation_integral_total(
     const Real *C,           // array size Nsound
     const Real *K_bar,       // array size Nsound
@@ -700,11 +739,11 @@ void Radiation_integral_total(
 
             // f1 (identical to Amiet)
             Real fr1, fi1;
-            Radiation_integral1(B, C[i], fr1, fi1);
+            Radiation_integral1<Real>(B, C[i], fr1, fi1);
 
             // f2 (back-scattering in R&M)
             Real fr2, fi2;
-            Radiation_integral2(
+            Radiation_integral2<Real>(
                 B,              // B
                 K_bar[i],       // K_bar
                 k_min_bar,      // k_min_bar
@@ -728,7 +767,7 @@ void Radiation_integral_total(
             Real Thetaprime_r, Thetaprime_i;
 
             // compute wavenumbers etc.
-            Wavenumbers_subcrit(
+            Wavenumbers_subcrit<Real>(
                 M, mu_bar[i], K_1_bar[i], K_2_bar[i], K_bar[i], beta,
                 k_min_bar_prime, A1prime_r, A1prime_i,
                 Aprime_r, Aprime_i,
@@ -736,7 +775,7 @@ void Radiation_integral_total(
 
             // f1
             Real fr1, fi1;
-            Radiation_integral1_subcrit(
+            Radiation_integral1_subcrit<Real>(
                 C[i],
                 A1prime_r, A1prime_i,
                 mu_bar[i],
@@ -747,7 +786,7 @@ void Radiation_integral_total(
 
             // f2
             Real fr2, fi2;
-            Radiation_integral2_subcrit(
+            Radiation_integral2_subcrit<Real>(
                 Aprime_r, Aprime_i,
                 A1prime_r, A1prime_i,
                 mu_bar[i],
@@ -770,7 +809,7 @@ void Radiation_integral_total(
 }
 
 
-
+template<typename Real>
 void TE_noise_outer(
     // Flow / geometry parameters formerly in 'inputs':
     Real M, Real U, Real x, Real y, Real z,

@@ -1,8 +1,13 @@
+#pragma once
+
+#include "real_type.hpp"
+#include "data_structs.hpp"
 #include <iostream>
 #include <cmath>
-#include "data_structs.h"
-#include "amiet.h"
-#include "real_type.h"
+
+#include "WPSmodels.hpp"
+#include "newAmiet.hpp"
+
 #include <fstream>
 #include <sstream>
 
@@ -11,6 +16,19 @@
 using json = nlohmann::json;
 
 
+template<typename Real> struct Isolc;
+template<typename Real> struct Isolv;
+template<typename Real> struct Vsol;
+template<typename Real> struct Foil;
+template<typename Real> struct Param;
+template<typename Real> struct Post;
+template<typename Real> struct Oper;
+template<typename Real> struct Geom;
+template<typename Real> struct Wake;
+template<typename Real> struct Glob;
+template<typename Real> struct Trans;
+
+template<typename Real>
 void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,const Real delta,const Real tauW,
                     const Real tauMax,const Real edgeVel,const Real dpdx, const Real (&omega)[Nsound], Real nu,
                     const Real Uinf,
@@ -31,10 +49,6 @@ void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,co
     {
         calc_WPS_Goody(theta,deltaStar,delta,useTauW,tauMax,edgeVel,dpdx,omega,rho,nu,Uinf,WPS);
     }
-    else if (model == "lee")
-    {
-        calc_WPS_Lee(theta,deltaStar,delta,useTauW,tauMax,edgeVel,dpdx,omega,rho,nu,WPS);
-    }
     else if (model == "kam")
     {
         calc_WPS_Kamruzzaman(theta,deltaStar,useTauW,edgeVel,dpdx,omega,rho,nu,WPS);
@@ -46,9 +60,10 @@ void calc_WPS(const std::string& model, const Real theta,const Real deltaStar,co
 
 }
 
-Real calc_OASPL(const Real* botStates, const Real* topStates, const Real chordScale, const Real Uinf,
+template<typename Real>
+Real calc_OASPL_AD(const Real* botStates, const Real* topStates, const Real chordScale, const Real Uinf,
     const Real X,const Real Y,const Real Z, const Real S, const Real nu, const Real rho,
-    const int WPSjson,const std::string& model){
+    const std::string& model){
 
     const Real startExp = 2.0; // start exp : 2 (100Hz)
     const Real endExp = 4.30103; // final exp : 4.30103 (20,000 Hz)
@@ -102,7 +117,9 @@ Real calc_OASPL(const Real* botStates, const Real* topStates, const Real chordSc
     }
 
     Real farfieldSpectra[Nsound] ;
-    TE_noise_outer((Uinf/340),Uinf,X,Y,Z,chordScale/2,0.0,chordScale,S,340,rho,nu,
+
+    Real c = Uinf/340.0;
+    TE_noise_outer<Real>(c,Uinf,X,Y,Z,chordScale/2,0.0,chordScale,S,340.0,rho,nu,
                 omega,WPSLower,WPSUpper,farfieldSpectra);
 
     // integrate S_pp over frequency:
@@ -116,29 +133,5 @@ Real calc_OASPL(const Real* botStates, const Real* topStates, const Real chordSc
     Real pref2 = (20e-6)*(20e-6); // reference pressure squared
     Real OASPL = 10.0 * std::log10(integral / pref2);
 
-    if (WPSjson == 1) {
-        json j;
-        double prefSqrd = pref2.getValue();
-        std::vector<double> freq_d(Nsound);
-        std::vector<double> wpsupper_d(Nsound);
-        std::vector<double> wpslower_d(Nsound);
-        std::vector<double> spectra_d(Nsound);
-        for (int i=0; i<Nsound; ++i){
-            freq_d[i]     = Freq[i].getValue();
-            wpsupper_d[i] = (WPSUpper[i].getValue())/prefSqrd;
-            wpslower_d[i] = (WPSLower[i].getValue())/prefSqrd;
-            spectra_d[i]  = (farfieldSpectra[i].getValue())/prefSqrd;
-        }
-        j["frequency_Hz"]        = freq_d;
-        j["WPS_upper/prefSqrd"]  = wpsupper_d;
-        j["WPS_lower/prefSqrd"]  = wpslower_d;
-        j["FF_spectra/prefSqrd"] = spectra_d;
-        j["OASPL_dB"]     = OASPL.getValue();
-
-        std::ofstream file("WPS.json");
-        file << j.dump(4);     // pretty print, 4 spaces
-        file.close();
-    }   
-    
     return OASPL;
 }
