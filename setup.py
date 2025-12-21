@@ -24,7 +24,7 @@ class BuildWithCMake(build_py):
         os.makedirs(output_bin_dir, exist_ok=True)
         shutil.copy(os.path.join(build_dir, "CFoil_fwd_double"), output_bin_dir)
         shutil.copy(os.path.join(build_dir, "CFoil_fwd_codi"), output_bin_dir)
-        shutil.copy(os.path.join(build_dir, "CFoil_AD"), output_bin_dir)
+        #shutil.copy(os.path.join(build_dir, "CFoil_AD"), output_bin_dir)
         
         # 3. Continue with the normal Python build
         super().run()

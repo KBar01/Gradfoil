@@ -10,7 +10,7 @@ from .xfoilExtract import xfoil_start_run
 BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
 EXEC_FWD = os.path.join(BIN_DIR, "CFoil_fwd_double")
 EXEC_FWD_codi = os.path.join(BIN_DIR, "CFoil_fwd_codi")
-EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
+#EXEC_AD = os.path.join(BIN_DIR, "CFoil_AD")
 
 
 def standard_run(xcoords,ycoords,Re,alphaDeg,Ma,sampleTE,X,Y,Z,S,model,rho,nu,ncrit,custUinf,returnFoilCps,Ufac,TEfac,toptrans,bottrans,force,lateRestart,lateRestartNorm,chord,double):
@@ -274,9 +274,9 @@ def fwd_run_d(xcoords,ycoords,alphaDeg,Re=1e6,Ma=0.0,
         return success
 
 
-def grad_run():
-    # Run the AD version of the code, using known solution from fwd run
-    result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
+#def grad_run():
+#    # Run the AD version of the code, using known solution from fwd run
+#    result = subprocess.run([EXEC_AD],cwd=os.getcwd(), capture_output=True, text=True)
 
 def WPS_run(Re,X,Y,Z,S,model,chord,rho,nu,topBLstates,botBLstates):
     cwd = os.getcwd()

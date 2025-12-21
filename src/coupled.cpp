@@ -113,7 +113,7 @@ bool solve_coupled(const Oper& oper, const Foil& foil, const Wake& wake,
             for (int k = 0; k < RVdimension; ++k){
                 states_vec[k] = glob.U[k].getValue();
             }
-         
+
             restart["states"] = states_vec;
             restart["turb"]   = vsol.turb;
             restart["stag"] = isol.stagIndex;

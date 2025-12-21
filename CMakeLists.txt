@@ -107,28 +107,3 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     -fno-fast-math
   )
 endif()
-
-########### AD using codi ###########################
-
-
-add_executable(CFoil_AD src/main.cpp ${SOURCES})
-target_link_libraries(CFoil_AD PRIVATE Eigen3::Eigen CoDiPack nlohmann_json::nlohmann_json)
-target_include_directories(CFoil_AD PRIVATE
- ${COMMON_INCLUDES}
- ${NOISE_INCLUDES}
- ${codipack_SOURCE_DIR}/include
-)
-target_compile_definitions(CFoil_AD PRIVATE
-  -DUSE_CODIPACK
-  -DCODI_EnableEigen
-  -DAD_VERSION
-  -DDO_BL_GRADIENT=${DO_BL_GRADIENT_DEFINE}
-)
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  target_compile_options(CFoil_AD PRIVATE 
-    -O2
-    -fno-fast-math
-  )
-endif()
-
-#############################################

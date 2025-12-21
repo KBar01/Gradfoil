@@ -6,6 +6,7 @@
 #include "panel_funcs.h"
 #include "data_structs.h"
 #include "vector_ops.hpp"
+#include "linSolveMatrix.hpp"
 
 
 #ifndef USE_CODIPACK
@@ -45,61 +46,11 @@ void solve_sys(Isol&isol, const Real* RHS, Real*Bp) {
 }
 #else
 
+void solve_sys(Isol&isol, const Real* RHS, Real*Bp){
 
-template<typename T>
-using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-template<typename T>
-using Vector = Eigen::Matrix<T, Eigen::Dynamic, 1>;
- 
-template<typename Type>
-void func(Matrix<Type> const& A, Vector<Type> const& rhs, Vector<Type> & sol) {
-  sol = A.colPivHouseholderQr().solve(rhs);
+    solve_sys_ue(isol,RHS,Bp);
 }
- 
-template<typename Number>
-struct EigenSolver : public codi::EigenLinearSystem<Number, Matrix, Vector> {
-  public:
- 
-    using Base = codi::EigenLinearSystem<Number, Matrix, Vector>;  
-    using MatrixReal = typename Base::MatrixReal;                                   
-    using VectorReal = typename Base::VectorReal; 
 
-    void solveSystem(MatrixReal const* A, VectorReal const* b, VectorReal* x) {
-        func(*A, *b, *x);
-    }
-};
-
-
-void solve_sys(Isol&isol, const Real* RHS, Real*Bp) {
-    
-    constexpr int Nsize = Ncoords + 1;  // Matrix dimensions
-    constexpr int Npanels = Ncoords+Nwake-2;
-    
-    // Wrap the flattened column-major AIC vector into an Eigen matrix
-    Matrix<Real> A(Nsize, Nsize);
-    Vector<Real> rhsEigen(Ncoords+1);
-    Vector<Real> sol(Ncoords+1);
-    
-    for (int i = 0; i < Nsize; ++i) {
-        for (int j = 0; j < Nsize; ++j) {
-            A(i, j) = isol.infMatrix[colMajorIndex(i, j, Nsize)];
-        }
-    }
-
-    for (int col = 0; col < Npanels; ++col) {
-        
-        
-        for (int row = 0; row < Nsize; ++row) {
-            rhsEigen(row) = RHS[colMajorIndex(row, col, Nsize)];
-        }
-
-        codi::solveLinearSystem(EigenSolver<Real>(), A, rhsEigen, sol);
-
-        for (int row = 0; row < Ncoords; ++row) {
-            Bp[colMajorIndex(row, col, Ncoords)] =-1*sol(row);
-        }
-    }
-}
 #endif
 
 void compute_Dw(const Real* Cgam, const Real* Bp, const Real* Csig, Real* Dw){
