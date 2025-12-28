@@ -1,12 +1,10 @@
 import numpy as np
+from __future__ import annotations
 from dataclasses import dataclass, field
+from typing import Optional
 
-"""
-Below are the user inputs, these are datastructs containing all the needed
-info for the code to run, split into groups either being aerofoil geom 
-related, acoustics related (observer/ model choice), or operating condition
 
-"""
+
 def _as_1d_float_array(a, name: str) -> np.ndarray:
     arr = np.asarray(a, dtype=float)
     if arr.ndim != 1:
@@ -24,14 +22,15 @@ def _require_length(arr: np.ndarray, n: int, name: str) -> np.ndarray:
         raise ValueError(f"{name} must have length {n}, got {arr.size}")
     return arr
 
+
 @dataclass
 class Aerofoil:
     xcoords: np.ndarray
     ycoords: np.ndarray
-    chord: float | None = 1.0
-    span: float | None = 2.0
-    panelUniformity: float | None = 1.0
-    panelTEspacing: float | None = 0.09
+    chord: Optional[float] = 1.0
+    span: Optional[float] = 2.0
+    panelUniformity: Optional[float] = 1.0
+    panelTEspacing: Optional[float] = 0.09
 
     def __post_init__(self):
         self.xcoords = _as_1d_float_array(self.xcoords, "Aerofoil.xcoords")
@@ -45,12 +44,10 @@ class Aerofoil:
         if self.xcoords.size < 2:
             raise ValueError("Need at least 2 points")
 
-        # --- Enforce TE convention: TE is at x == 1.0 ---
         x = self.xcoords
         y = self.ycoords
 
         te_x = 1.0
-        # Tolerance: scale-aware, but anchored to 1.0 as you specified
         tol = 1e-8
 
         te_mask = np.isclose(x, te_x, atol=tol, rtol=0.0)
@@ -62,27 +59,23 @@ class Aerofoil:
                 f"Found {te_idx.size}. Ensure both lower and upper TE points have x=1.0."
             )
 
-        # Usually coords start/end at TE; if they don't, we can still decide orientation
         first_te = int(te_idx.min())
         last_te = int(te_idx.max())
 
-        # We want the sequence to go from bottom TE to top TE:
-        # y at the first TE encountered should be <= y at the last TE encountered.
         if y[first_te] > y[last_te]:
             self.xcoords = self.xcoords[::-1].copy()
             self.ycoords = self.ycoords[::-1].copy()
 
+
 @dataclass
 class Acoustics:
-    # (typo note: you wrote oberserXYZ; keeping your name, but consider renaming to observerXYZ)
     observerXYZ: np.ndarray
-    TESampleLoc: float | None = 0.97
-    model: str | None = "roz"
+    TESampleLoc: Optional[float] = 0.97
+    model: Optional[str] = "roz"
 
     def __post_init__(self):
         self.observerXYZ = _as_float_array(self.observerXYZ, "Acoustics.observerXYZ").astype(float)
 
-        # Accept (3,), (1,3), (3,1) etc. but normalize to (3,)
         if self.observerXYZ.size != 3:
             raise ValueError(f"observerXYZ must have length 3, got shape {self.observerXYZ.shape}")
         self.observerXYZ = self.observerXYZ.reshape(3,)
@@ -94,12 +87,12 @@ class Acoustics:
 
 @dataclass
 class OperatingConds:
-    alpha: float | None = 0.0
-    Re   : float | None = 2e6
-    rho: float | None = 1.225
-    Ma: float | None = 0.0
-    nu: float | None = 0.000015
-    nCrit: float | None = 9.0
+    alpha: Optional[float] = 0.0
+    Re: Optional[float] = 2e6
+    rho: Optional[float] = 1.225
+    Ma: Optional[float] = 0.0
+    nu: Optional[float] = 0.000015
+    nCrit: Optional[float] = 9.0
     transition: np.ndarray = field(default_factory=lambda: np.array([1.0, 1.0], dtype=float))
 
     def __post_init__(self):
@@ -109,12 +102,12 @@ class OperatingConds:
             raise ValueError(f"transition must have length 2, got shape {self.transition.shape}")
         self.transition = self.transition.reshape(2,)
 
+
 @dataclass
 class WPSinfo:
     Re: float
     observerXYZ: np.ndarray
 
-    # required arrays (no defaults) must come before defaulted fields
     DispThick: np.ndarray
     MomThick: np.ndarray
     BLHeight: np.ndarray
@@ -123,19 +116,17 @@ class WPSinfo:
     edgeVel: np.ndarray
     dpdx: np.ndarray
 
-    chord: float | None = 1.0
-    span: float | None = 2.0
-    model: str | None = "roz"
-    rho: float | None = 1.225
-    nu: float | None = 1.5e-5
+    chord: Optional[float] = 1.0
+    span: Optional[float] = 2.0
+    model: Optional[str] = "roz"
+    rho: Optional[float] = 1.225
+    nu: Optional[float] = 1.5e-5
 
     def __post_init__(self):
-        # --- Observer ---
         self.observerXYZ = _as_1d_float_array(self.observerXYZ, "WPSinfo.observerXYZ")
         _require_length(self.observerXYZ, 3, "WPSinfo.observerXYZ")
         self.observerXYZ = self.observerXYZ.reshape(3,)
 
-        # --- Boundary-layer arrays (must be length 2) ---
         for name in (
             "DispThick",
             "MomThick",
